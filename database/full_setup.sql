@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS public.reservations (
     buyer_confirmed BOOLEAN DEFAULT FALSE,
     seller_confirmed BOOLEAN DEFAULT FALSE,
     meeting_point VARCHAR(150) NOT NULL DEFAULT 'Biblioteca Central - UCM Pemba',
+    cancellation_reason TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE

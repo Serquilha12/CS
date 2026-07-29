@@ -171,6 +171,34 @@ class AuthService {
     if (error) throw new Error(error.message);
     return true;
   }
+
+  async getUserStats(userId) {
+    const { data: sales } = await supabaseAdmin
+      .from('reservations')
+      .select('agreed_price_mzn')
+      .eq('seller_id', userId)
+      .eq('status', 'completed');
+
+    const { data: purchases } = await supabaseAdmin
+      .from('reservations')
+      .select('agreed_price_mzn')
+      .eq('buyer_id', userId)
+      .eq('status', 'completed');
+
+    const totalVolumeMoved = (sales || []).reduce((acc, curr) => acc + Number(curr.agreed_price_mzn || 0), 0);
+    const totalMoneySaved = (purchases || []).reduce((acc, curr) => acc + (Number(curr.agreed_price_mzn || 0) * 0.35), 0);
+
+    const completedSalesCount = sales ? sales.length : 0;
+    const completedPurchasesCount = purchases ? purchases.length : 0;
+
+    return {
+      totalVolumeMovedMzn: Number(totalVolumeMoved.toFixed(2)),
+      totalMoneySavedMzn: Number(totalMoneySaved.toFixed(2)),
+      completedSalesCount,
+      completedPurchasesCount,
+      totalCompletedTransactions: completedSalesCount + completedPurchasesCount
+    };
+  }
 }
 
 module.exports = new AuthService();

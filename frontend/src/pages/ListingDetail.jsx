@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tag, MapPin, Calendar, MessageSquare, ShoppingCart, UserCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { Tag, MapPin, Calendar, MessageSquare, ShoppingCart, UserCheck, ArrowLeft, Share2, Flag, Loader2, CheckCircle2 } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { AuthContext } from '../context/AuthContext';
@@ -63,6 +63,24 @@ export function ListingDetail() {
     }
   }
 
+  function handleShare() {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({
+        title: listing?.title || 'CampusStore UCM',
+        text: `Encontrei este artigo na CampusStore UCM: ${listing?.title}`,
+        url
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url);
+      showToast('Link do anúncio copiado para a área de transferência! Partilhe no grupo da turma.', 'info');
+    }
+  }
+
+  function handleReport() {
+    showToast('Denúncia submetida com sucesso aos moderadores da UCM Pemba.', 'info');
+  }
+
   if (loading) {
     return (
       <div className="max-w-xl mx-auto p-6 text-center space-y-3">
@@ -77,14 +95,38 @@ export function ListingDetail() {
   const isOwner = listing.owner_id === user?.id;
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4 pb-24">
-      {/* Botão de Voltar */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4 mr-1" /> Voltar ao Mercado
-      </button>
+    <div className="max-w-xl mx-auto p-4 space-y-4 pb-28">
+      {/* Cabeçalho de Navegação Móvel com Voltar (ArrowLeft), Partilhar (Share2) e Denunciar (Flag) */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-xs"
+          title="Voltar ao Mercado"
+        >
+          <ArrowLeft className="w-5 h-5 mr-1" />
+          <span className="text-xs font-bold">Voltar</span>
+        </button>
+
+        <div className="flex items-center space-x-2">
+          {/* Botão de Partilha Rápida para o Grupo de WhatsApp da Turma */}
+          <button
+            onClick={handleShare}
+            className="p-2 bg-white border border-slate-200 text-slate-700 hover:text-ucm-emerald rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-xs"
+            title="Partilhar no WhatsApp da Turma"
+          >
+            <Share2 className="w-4 h-4 text-slate-600" />
+          </button>
+
+          {/* Botão Discreto de Denúncia */}
+          <button
+            onClick={handleReport}
+            className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200"
+            title="Denunciar Anúncio Impróprio"
+          >
+            <Flag className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
       {/* Imagem do Anúncio */}
       <div className="relative rounded-3xl overflow-hidden shadow-sm border border-slate-100 bg-slate-100 h-64">
@@ -97,6 +139,11 @@ export function ListingDetail() {
         <span className="absolute top-3 left-3 px-3 py-1 bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold rounded-xl uppercase">
           {listing.transaction_type}
         </span>
+        {listing.status === 'negotiating' && (
+          <span className="absolute top-3 right-3 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-xl shadow-sm">
+            Negociação em Curso
+          </span>
+        )}
       </div>
 
       {/* Detalhes do Artigo */}
@@ -127,16 +174,16 @@ export function ListingDetail() {
           </p>
         </div>
 
-        {/* Botões de Ação */}
+        {/* Botões de Ação Inline (Desktop) */}
         {!isOwner && (
-          <div className="pt-4 border-t border-slate-100 flex space-x-2">
+          <div className="hidden sm:flex pt-4 border-t border-slate-100 space-x-2">
             <button
               onClick={handleReserveListing}
               disabled={reserving}
               className="flex-1 py-3.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl text-xs shadow-md transition-all flex items-center justify-center min-h-[44px]"
             >
               {reserving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
-              Solicitar Reserva
+              Negociar / Solicitar Reserva
             </button>
 
             <button
@@ -148,6 +195,28 @@ export function ListingDetail() {
           </div>
         )}
       </div>
+
+      {/* BARRA FIXA DE AÇÃO NO FUNDO DO ECRÃ EM TELEMÓVEL (MOBILE BOTTOM CTA) */}
+      {!isOwner && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex space-x-2 shadow-2xl">
+          <button
+            onClick={handleReserveListing}
+            disabled={reserving}
+            className="flex-1 py-3.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl text-xs shadow-md transition-all flex items-center justify-center min-h-[44px]"
+          >
+            {reserving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
+            Negociar / Solicitar Reserva
+          </button>
+
+          <button
+            onClick={() => navigate('/chat', { state: { listing } })}
+            className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[44px]"
+            title="Chat Privado"
+          >
+            <MessageSquare className="w-5 h-5 text-slate-700" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

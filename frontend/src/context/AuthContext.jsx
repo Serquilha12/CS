@@ -11,6 +11,31 @@ export function AuthProvider({ children }) {
     checkAuthSession();
   }, []);
 
+  // Temporizador de Inatividade (15 minutos = 900.000 ms) para computadores da faculdade
+  useEffect(() => {
+    if (!user) return;
+
+    let inactivityTimer;
+
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        logout();
+        alert('Sessão encerrada automaticamente por inatividade no computador para proteger a sua conta UCM.');
+      }, 15 * 60 * 1000);
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    resetTimer();
+
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [user]);
+
   async function checkAuthSession() {
     try {
       const res = await fetchApi('/auth/me');

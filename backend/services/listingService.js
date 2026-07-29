@@ -20,7 +20,21 @@ class ListingService {
       console.warn('[LISTING SERVICE WARNING]:', e.message);
     }
 
-    // 2. Inserir anúncio com cliente Admin autenticado pelo backend
+    // 2. Prevenção de Dupla Submissão por Conexão Lenta (30 segundos)
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
+    const { data: recentDuplicates } = await supabaseAdmin
+      .from('listings')
+      .select('id')
+      .eq('owner_id', userId)
+      .eq('title', listingData.title)
+      .eq('price_mzn', listingData.price_mzn)
+      .gte('created_at', thirtySecondsAgo);
+
+    if (recentDuplicates && recentDuplicates.length > 0) {
+      throw new Error('Publicação duplicada detetada. O seu anúncio já foi submetido com sucesso.');
+    }
+
+    // 3. Inserir anúncio com cliente Admin autenticado pelo backend
     const { data, error } = await supabaseAdmin
       .from('listings')
       .insert({
@@ -42,7 +56,7 @@ class ListingService {
     let query = supabaseAdmin
       .from('listings')
       .select('*, profiles:owner_id(full_name, campus)', { count: 'exact' })
-      .eq('status', 'active')
+      .in('status', ['active', 'negotiating'])
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

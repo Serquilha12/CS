@@ -50,7 +50,8 @@ class ReservationController {
 
   async cancel(req, res, next) {
     try {
-      const reservation = await reservationService.cancelReservation(req.user.id, req.params.id);
+      const { cancellation_reason } = req.body || {};
+      const reservation = await reservationService.cancelReservation(req.user.id, req.params.id, cancellation_reason);
       return res.status(200).json({
         success: true,
         message: 'Reserva cancelada. O anúncio regressou ao feed ativo.',

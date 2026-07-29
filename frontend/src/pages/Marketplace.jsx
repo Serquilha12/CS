@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Tag, Filter, Bell } from 'lucide-react';
+import { Search, MapPin, Tag, Filter, SlidersHorizontal, Bell, Plus } from 'lucide-react';
 import { useListings } from '../hooks/useListings';
 import { useToast } from '../context/ToastContext';
 import { MarketplaceSkeletonGrid } from '../components/SkeletonLoaders';
@@ -7,15 +7,23 @@ import { EmptyState } from '../components/EmptyState';
 import { CreateListingWizard } from '../components/CreateListingWizard';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export function Marketplace() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedActionType, setSelectedActionType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [isWizardOpen, setIsWizardOpen] = useState(location.pathname === '/anunciar');
+
+  useEffect(() => {
+    if (location.pathname === '/anunciar') {
+      setIsWizardOpen(true);
+    }
+  }, [location.pathname]);
 
   const { listings, loading, createListing, refresh } = useListings({
     category: selectedCategory,
@@ -24,15 +32,23 @@ export function Marketplace() {
 
   // Filtragem no cliente por Tipo de Ação
   const filteredListings = listings.filter((item) => {
+    if (item.status === 'reserved' || item.status === 'sold' || item.status === 'removed') return false;
     if (!selectedActionType) return true;
     return item.transaction_type === selectedActionType;
   });
+
+  function handleCloseWizard() {
+    setIsWizardOpen(false);
+    if (location.pathname === '/anunciar') {
+      navigate('/marketplace');
+    }
+  }
 
   async function handleWizardSubmit(data) {
     try {
       await createListing(data);
       showToast('Anúncio publicado com sucesso no mercado UCM!', 'success');
-      setIsWizardOpen(false);
+      handleCloseWizard();
       refresh();
     } catch (e) {
       showToast(e.message || 'Erro ao publicar anúncio. Verifique os dados.', 'error');
@@ -40,23 +56,35 @@ export function Marketplace() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-4">
-      {/* Header do Marketplace */}
+    <div className="max-w-4xl mx-auto p-4 space-y-4 pb-28 relative">
+      {/* Header do Marketplace com Alertas Bell */}
       <div className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Mercado Académico UCM</h1>
           <p className="text-xs text-slate-500">Comunidade Pemba • Compra, Troca, Doação e Empréstimo</p>
         </div>
 
-        <button
-          onClick={() => setIsWizardOpen(true)}
-          className="px-4 py-2.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl shadow-md text-xs transition-all flex items-center"
-        >
-          + Anunciar Material
-        </button>
+        <div className="flex items-center space-x-2">
+          {/* Botão de Notificação de Alertas da Turma */}
+          <button
+            onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
+            className="p-3 bg-white border border-slate-200 text-slate-600 hover:text-ucm-emerald rounded-2xl shadow-xs transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            title="Notificações do Curso"
+          >
+            <Bell className="w-5 h-5 text-slate-600" />
+          </button>
+
+          {/* Botão Anunciar no Desktop */}
+          <button
+            onClick={() => setIsWizardOpen(true)}
+            className="hidden sm:flex px-4 py-2.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl shadow-md text-xs transition-all items-center min-h-[44px]"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Anunciar Material
+          </button>
+        </div>
       </div>
 
-      {/* Barra de Pesquisa */}
+      {/* Barra de Pesquisa com Ícone Lupa Search */}
       <div className="relative">
         <Search className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
         <input
@@ -64,20 +92,20 @@ export function Marketplace() {
           placeholder="Pesquisar manuais, calculadoras, batas de laboratório..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none text-sm"
+          className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none text-sm min-h-[44px]"
         />
       </div>
 
-      {/* Filtro por Tipo de Ação (Venda, Troca, Doação, Empréstimo) */}
+      {/* Filtro por Tipo de Ação com Ícone SlidersHorizontal / Filter */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center pr-1">
-          <Filter className="w-3 h-3 mr-1" /> Ação:
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center pr-1 shrink-0">
+          <SlidersHorizontal className="w-3.5 h-3.5 mr-1 text-slate-500" /> Ação:
         </span>
         <button
           onClick={() => setSelectedActionType('')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all min-h-[44px] flex items-center ${
             selectedActionType === ''
-              ? 'bg-slate-900 text-white'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'bg-white text-slate-600 border border-slate-200'
           }`}
         >
@@ -87,9 +115,9 @@ export function Marketplace() {
           <button
             key={type.id}
             onClick={() => setSelectedActionType(type.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all capitalize ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all capitalize min-h-[44px] flex items-center ${
               selectedActionType === type.id
-                ? 'bg-slate-900 text-white shadow-sm'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -98,11 +126,11 @@ export function Marketplace() {
         ))}
       </div>
 
-      {/* Pill Filters (Categorias) */}
+      {/* Pill Filters (Chips Ovais de Categorias com Touch Target > 44px) */}
       <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-none">
         <button
           onClick={() => setSelectedCategory('')}
-          className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[44px] flex items-center ${
             selectedCategory === ''
               ? 'bg-ucm-emerald text-white shadow-md'
               : 'bg-white text-slate-600 border border-slate-200'
@@ -114,7 +142,7 @@ export function Marketplace() {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-4 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[44px] flex items-center ${
               selectedCategory === cat
                 ? 'bg-ucm-emerald text-white shadow-md'
                 : 'bg-white text-slate-600 border border-slate-200'
@@ -130,7 +158,7 @@ export function Marketplace() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <CreateListingWizard
             onSubmit={handleWizardSubmit}
-            onCancel={() => setIsWizardOpen(false)}
+            onCancel={handleCloseWizard}
           />
         </div>
       )}
@@ -188,14 +216,23 @@ export function Marketplace() {
                     ? 'Grátis'
                     : `${item.price_mzn} MZN`}
                 </span>
-                <span className="text-xs text-slate-400 flex items-center">
-                  <MapPin className="w-3 h-3 mr-1" /> {item.campus_location || 'Campus Pemba'}
+                <span className="text-xs text-slate-500 font-semibold flex items-center">
+                  <MapPin className="w-3.5 h-3.5 mr-1 text-ucm-emerald shrink-0" /> {item.campus_location || 'FGTI - Pemba'}
                 </span>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* FLOATING ACTION BUTTON (FAB) FIXO NO CANTO INFERIOR DIREITO PARA TELEMÓVEL */}
+      <button
+        onClick={() => setIsWizardOpen(true)}
+        className="fixed bottom-20 right-4 sm:hidden z-40 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold px-5 py-3.5 rounded-full shadow-2xl shadow-emerald-600/50 flex items-center justify-center space-x-2 border-2 border-white min-h-[48px]"
+      >
+        <Plus className="w-6 h-6 text-white" />
+        <span className="text-xs font-extrabold uppercase tracking-wide">Anunciar</span>
+      </button>
     </div>
   );
 }

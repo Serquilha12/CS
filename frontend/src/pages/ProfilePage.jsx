@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { fetchApi } from '../services/api';
-import { User, Mail, GraduationCap, MapPin, Phone, LogOut, Trash2, Tag, Edit3, Save } from 'lucide-react';
+import { User, Mail, GraduationCap, MapPin, Phone, LogOut, Trash2, Tag, Edit3, Save, TrendingUp, PiggyBank, CheckCircle2, Clock, Pencil } from 'lucide-react';
 import { UCM_COURSES } from '../constants';
 
 export function ProfilePage() {
@@ -11,6 +11,13 @@ export function ProfilePage() {
   const [myListings, setMyListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [stats, setStats] = useState({
+    totalVolumeMovedMzn: 0,
+    totalMoneySavedMzn: 0,
+    completedSalesCount: 0,
+    completedPurchasesCount: 0,
+    totalCompletedTransactions: 0
+  });
 
   const [formData, setFormData] = useState({
     full_name: user?.full_name || 'Estudante UCM',
@@ -21,6 +28,7 @@ export function ProfilePage() {
 
   useEffect(() => {
     loadMyListings();
+    loadUserStats();
   }, []);
 
   async function loadMyListings() {
@@ -34,6 +42,17 @@ export function ProfilePage() {
       console.error(e);
     } finally {
       setLoadingListings(false);
+    }
+  }
+
+  async function loadUserStats() {
+    try {
+      const res = await fetchApi('/auth/stats');
+      if (res.success && res.data) {
+        setStats(res.data);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar estatísticas do utilizador:', e);
     }
   }
 
@@ -76,11 +95,11 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-6">
+    <div className="max-w-xl mx-auto p-4 space-y-6 pb-24">
       {/* Cartão de Perfil do Estudante */}
       <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm relative space-y-4">
         <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-ucm-emerald text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-md">
+          <div className="w-16 h-16 bg-ucm-emerald text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
             {user.full_name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1">
@@ -95,10 +114,10 @@ export function ProfilePage() {
 
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
+            className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
             title="Editar Perfil"
           >
-            <Edit3 className="w-4 h-4" />
+            <Edit3 className="w-5 h-5 text-slate-600" />
           </button>
         </div>
 
@@ -111,7 +130,7 @@ export function ProfilePage() {
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="w-full p-3 border border-slate-300 rounded-xl text-sm"
+                className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"
               />
             </div>
 
@@ -120,7 +139,7 @@ export function ProfilePage() {
               <select
                 value={formData.course}
                 onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                className="w-full p-3 border border-slate-300 rounded-xl text-sm"
+                className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"
               >
                 {UCM_COURSES.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -135,13 +154,13 @@ export function ProfilePage() {
                 placeholder="+258 84 123 4567"
                 value={formData.phone_number}
                 onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                className="w-full p-3 border border-slate-300 rounded-xl text-sm"
+                className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-ucm-emerald text-white font-semibold rounded-xl text-sm shadow-md flex items-center justify-center"
+              className="w-full py-3 bg-ucm-emerald text-white font-semibold rounded-xl text-sm shadow-md flex items-center justify-center min-h-[44px]"
             >
               <Save className="w-4 h-4 mr-2" /> Guardar Alterações
             </button>
@@ -165,12 +184,53 @@ export function ProfilePage() {
           </div>
         )}
 
+        {/* Botão de Terminar Sessão */}
         <button
           onClick={logout}
-          className="w-full py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold rounded-2xl text-xs flex items-center justify-center transition-colors border border-rose-200"
+          className="w-full py-3 bg-rose-50 text-rose-600 hover:bg-rose-100 font-semibold rounded-2xl text-xs flex items-center justify-center transition-colors border border-rose-200 min-h-[44px]"
         >
           <LogOut className="w-4 h-4 mr-2" /> Terminar Sessão
         </button>
+      </div>
+
+      {/* Cartões Estatísticos do Painel Pessoal */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Estatísticas do Painel Pessoal</h2>
+
+        <div className="grid grid-cols-3 gap-3">
+          {/* Card 1: Volume Movimentado */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between space-y-2">
+            <div className="p-2 bg-emerald-50 text-ucm-emerald rounded-xl w-fit">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400">Volume Movimentado</p>
+              <p className="text-base font-extrabold text-slate-800">{stats.totalVolumeMovedMzn} <span className="text-xs font-bold text-ucm-emerald">MZN</span></p>
+            </div>
+          </div>
+
+          {/* Card 2: Dinheiro Poupado */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between space-y-2">
+            <div className="p-2 bg-sky-50 text-sky-600 rounded-xl w-fit">
+              <PiggyBank className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400">Dinheiro Poupado</p>
+              <p className="text-base font-extrabold text-slate-800">{stats.totalMoneySavedMzn} <span className="text-xs font-bold text-sky-600">MZN</span></p>
+            </div>
+          </div>
+
+          {/* Card 3: Negócios Concluídos */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col justify-between space-y-2">
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl w-fit">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400">Concluídos</p>
+              <p className="text-base font-extrabold text-slate-800">{stats.totalCompletedTransactions} <span className="text-xs font-semibold text-slate-400">itens</span></p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Secção Meus Anúncios Publicados */}
@@ -197,20 +257,35 @@ export function ProfilePage() {
                     className="w-12 h-12 rounded-xl object-cover"
                   />
                   <div>
-                    <h3 className="font-bold text-slate-800 text-sm line-clamp-1">{item.title}</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-bold text-slate-800 text-sm line-clamp-1">{item.title}</h3>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                        item.status === 'negotiating'
+                          ? 'bg-amber-100 text-amber-800'
+                          : item.status === 'reserved'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : item.status === 'sold'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {item.status === 'negotiating' ? 'Em Negociação' : item.status === 'reserved' ? 'Reservado' : item.status === 'sold' ? 'Vendido' : 'Ativo'}
+                      </span>
+                    </div>
                     <span className="text-xs font-extrabold text-ucm-emerald">
                       {item.price_mzn} MZN
                     </span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleDeleteListing(item.id)}
-                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
-                  title="Apagar Anúncio"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleDeleteListing(item.id)}
+                    className="p-2.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    title="Apagar Anúncio"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -45,12 +45,17 @@ class ReservationService {
   async acceptReservation(sellerId, reservationId) {
     const { data: reservation } = await supabaseAdmin
       .from('reservations')
-      .select('*')
+      .select('*, listings:listing_id(status)')
       .eq('id', reservationId)
       .single();
 
     if (!reservation) throw new Error('Reserva não encontrada.');
     if (reservation.seller_id !== sellerId) throw new Error('Apenas o vendedor pode aceitar a reserva.');
+
+    // Proteção de Race Condition: se o anúncio já foi reservado ou vendido
+    if (reservation.listings?.status === 'reserved' || reservation.listings?.status === 'sold') {
+      throw new Error('Este anúncio já foi reservado por outro colega.');
+    }
 
     const { data, error } = await supabaseAdmin
       .from('reservations')
@@ -66,6 +71,14 @@ class ReservationService {
       .from('listings')
       .update({ status: 'reserved', updated_at: new Date() })
       .eq('id', reservation.listing_id);
+
+    // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrencia
+    await supabaseAdmin
+      .from('reservations')
+      .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega', updated_at: new Date() })
+      .eq('listing_id', reservation.listing_id)
+      .eq('status', 'pending')
+      .neq('id', reservationId);
 
     return data;
   }
@@ -121,7 +134,7 @@ class ReservationService {
     };
   }
 
-  async cancelReservation(userId, reservationId) {
+  async cancelReservation(userId, reservationId, cancellationReason) {
     const { data: reservation } = await supabaseAdmin
       .from('reservations')
       .select('*')
@@ -135,7 +148,11 @@ class ReservationService {
 
     const { data, error } = await supabaseAdmin
       .from('reservations')
-      .update({ status: 'cancelled', updated_at: new Date() })
+      .update({
+        status: 'cancelled',
+        cancellation_reason: cancellationReason || 'Cancelamento voluntário',
+        updated_at: new Date()
+      })
       .eq('id', reservationId)
       .select()
       .single();
