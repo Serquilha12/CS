@@ -24,10 +24,18 @@ async function authMiddleware(req, res, next) {
       .eq('id', user.id)
       .single();
 
+    if (profile?.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        error: 'A sua conta foi suspensa por violação das diretrizes de segurança da comunidade UCM Pemba.'
+      });
+    }
+
     req.user = {
       id: user.id,
       email: user.email,
       role: profile?.role || 'student',
+      status: profile?.status || 'active',
       course: profile?.course || '',
       full_name: profile?.full_name || ''
     };

@@ -68,7 +68,20 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Tabela de Logs de Auditoria de Moderação de Administradores
+-- 5. Tabela de Denúncias de Conteúdo / Utilizadores
+CREATE TABLE IF NOT EXISTS public.reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reporter_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    listing_id UUID REFERENCES public.listings(id) ON DELETE CASCADE,
+    reported_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    reason VARCHAR(100) NOT NULL,
+    details TEXT,
+    status VARCHAR(25) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'ignored')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6. Tabela de Logs de Auditoria de Moderação de Administradores
 CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     admin_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

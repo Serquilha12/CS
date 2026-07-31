@@ -168,7 +168,69 @@ class ReservationService {
     return data;
   }
 
+  async processTimeouts() {
+    try {
+      const now = new Date();
+      const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+      const days7Ago = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // 1. Timeout 48h: Vendedor não respondeu ao pedido de reserva
+      const { data: expired48h } = await supabaseAdmin
+        .from('reservations')
+        .select('id, listing_id')
+        .eq('status', 'pending')
+        .lt('created_at', hours48Ago);
+
+      if (expired48h && expired48h.length > 0) {
+        for (const resItem of expired48h) {
+          await supabaseAdmin
+            .from('reservations')
+            .update({
+              status: 'cancelled',
+              cancellation_reason: 'Timeout de 48h: Vendedor não respondeu à solicitação',
+              updated_at: new Date()
+            })
+            .eq('id', resItem.id);
+
+          await supabaseAdmin
+            .from('listings')
+            .update({ status: 'active', updated_at: new Date() })
+            .eq('id', resItem.listing_id);
+        }
+      }
+
+      // 2. Timeout 7 Dias: Item reservado sem dupla confirmação de entrega
+      const { data: expired7d } = await supabaseAdmin
+        .from('reservations')
+        .select('id, listing_id')
+        .eq('status', 'accepted')
+        .lt('updated_at', days7Ago);
+
+      if (expired7d && expired7d.length > 0) {
+        for (const resItem of expired7d) {
+          await supabaseAdmin
+            .from('reservations')
+            .update({
+              status: 'cancelled',
+              cancellation_reason: 'Timeout de 7 dias: Ausência de dupla confirmação presencial',
+              updated_at: new Date()
+            })
+            .eq('id', resItem.id);
+
+          await supabaseAdmin
+            .from('listings')
+            .update({ status: 'active', updated_at: new Date() })
+            .eq('id', resItem.listing_id);
+        }
+      }
+    } catch (e) {
+      console.warn('[RESERVATION TIMEOUT CLEANUP WARNING]:', e.message);
+    }
+  }
+
   async getReservationByListing(listingId) {
+    await this.processTimeouts();
+
     const { data, error } = await supabaseAdmin
       .from('reservations')
       .select('*, buyer:buyer_id(full_name), seller:seller_id(full_name)')

@@ -77,8 +77,27 @@ export function ListingDetail() {
     }
   }
 
-  function handleReport() {
-    showToast('Denúncia submetida com sucesso aos moderadores da UCM Pemba.', 'info');
+  async function handleReport() {
+    const reason = window.prompt(
+      'Motivo da denúncia ao Moderador UCM Pemba (Ex: Material inapropriado, Preço enganoso, Spam, Venda de exames):',
+      'Material inapropriado'
+    );
+    if (!reason) return;
+
+    try {
+      await fetchApi('/admin/reports', {
+        method: 'POST',
+        body: {
+          listing_id: listing.id,
+          reported_user_id: listing.owner_id,
+          reason,
+          details: `Denúncia registada no anúncio "${listing.title}" (ID: ${listing.id})`
+        }
+      });
+      showToast('Denúncia enviada à equipa de moderação da UCM Pemba com sucesso.', 'success');
+    } catch (e) {
+      showToast(e.message || 'Erro ao enviar denúncia.', 'error');
+    }
   }
 
   if (loading) {
@@ -180,17 +199,17 @@ export function ListingDetail() {
             <button
               onClick={handleReserveListing}
               disabled={reserving}
-              className="flex-1 py-3.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl text-xs shadow-md transition-all flex items-center justify-center min-h-[44px]"
+              className="flex-1 py-3.5 bg-persian hover:bg-persian-hover text-white font-extrabold rounded-2xl text-xs shadow-md shadow-persian/30 transition-all flex items-center justify-center min-h-[48px]"
             >
-              {reserving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
-              Negociar / Solicitar Reserva
+              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-carrot" /> : <ShoppingCart className="w-4 h-4 mr-2 text-carrot" />}
+              Solicitar Reserva / Negociar
             </button>
 
             <button
               onClick={() => navigate('/chat', { state: { listing } })}
-              className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[44px]"
+              className="py-3.5 px-4 bg-platinum hover:bg-slate-200 text-slate-700 font-extrabold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[48px]"
             >
-              <MessageSquare className="w-4 h-4 mr-1.5" /> Conversar
+              <MessageSquare className="w-4 h-4 mr-1.5 text-persian" /> Conversar
             </button>
           </div>
         )}
@@ -202,18 +221,18 @@ export function ListingDetail() {
           <button
             onClick={handleReserveListing}
             disabled={reserving}
-            className="flex-1 py-3.5 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-2xl text-xs shadow-md transition-all flex items-center justify-center min-h-[44px]"
+            className="flex-1 py-3.5 bg-persian hover:bg-persian-hover text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-persian/40 transition-all flex items-center justify-center min-h-[48px]"
           >
-            {reserving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
-            Negociar / Solicitar Reserva
+            {reserving ? <Loader2 className="w-4 h-4 animate-spin text-carrot" /> : <ShoppingCart className="w-4 h-4 mr-2 text-carrot" />}
+            Solicitar Reserva / Negociar
           </button>
 
           <button
             onClick={() => navigate('/chat', { state: { listing } })}
-            className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[44px]"
+            className="py-3.5 px-4 bg-platinum hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[48px]"
             title="Chat Privado"
           >
-            <MessageSquare className="w-5 h-5 text-slate-700" />
+            <MessageSquare className="w-5 h-5 text-persian" />
           </button>
         </div>
       )}

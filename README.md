@@ -79,7 +79,7 @@ database/seed.sql
 cd backend
 npm install
 cp .env.example .env   # Preencha com as suas chaves do Supabase
-npm start
+
 ```
 O servidor backend rodará em `http://localhost:5000` (API REST + WebSocket).
 

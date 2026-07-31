@@ -2,12 +2,13 @@ const { supabase, supabaseAdmin } = require('../config/supabase');
 
 class AuthService {
   async registerUser({ email, password, full_name, course, campus }) {
+    const normalizedEmail = email.toLowerCase().trim();
     let userId;
     let authSession = null;
     let authUser = null;
 
     const { data: adminData, error: adminErr } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
       user_metadata: { full_name, course, campus }
@@ -17,13 +18,13 @@ class AuthService {
       authUser = adminData.user;
       userId = adminData.user.id;
 
-      const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signInData } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (signInData?.session) {
         authSession = signInData.session;
       }
     } else {
       const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
           data: { full_name, course, campus }
@@ -72,8 +73,9 @@ class AuthService {
   }
 
   async loginUser({ email, password }) {
+    const normalizedEmail = email.toLowerCase().trim();
     let { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password
     });
 
