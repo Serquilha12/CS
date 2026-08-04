@@ -160,10 +160,14 @@ class AuthService {
   }
 
   async forgotPassword(email) {
-    if (!email.toLowerCase().endsWith('@ucm.ac.mz')) {
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    if (!normalizedEmail.endsWith('@ucm.ac.mz')) {
       throw new Error('Apenas e-mails institucionais da UCM (@ucm.ac.mz) são aceites.');
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const redirectUrl = `${process.env.CLIENT_URL || 'https://campusstore-ucm.vercel.app'}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: redirectUrl
+    });
     if (error) throw new Error(error.message);
     return true;
   }

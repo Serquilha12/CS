@@ -33,6 +33,7 @@ export function LandingPage() {
     course: UCM_COURSES[0]
   });
   const [forgotEmail, setForgotEmail] = useState('');
+  const [isForgotSuccess, setIsForgotSuccess] = useState(false);
 
   // Validação em Tempo Real de E-mail UCM
   const isLoginEmailValid = loginData.email.toLowerCase().trim().endsWith('@ucm.ac.mz');
@@ -105,8 +106,7 @@ export function LandingPage() {
       });
       if (res.success) {
         showToast('Instruções enviadas para o seu e-mail institucional.', 'success');
-        setIsForgotModal(false);
-        setForgotEmail('');
+        setIsForgotSuccess(true);
       }
     } catch (err) {
       showToast(err.message || 'Erro ao solicitar redefinição.', 'error');
@@ -471,58 +471,92 @@ export function LandingPage() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all">
           <div className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-md shadow-2xl relative border border-slate-100 animate-in fade-in zoom-in duration-200">
             <button
-              onClick={() => setIsForgotModal(false)}
+              onClick={() => {
+                setIsForgotModal(false);
+                setIsForgotSuccess(false);
+              }}
               className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="mb-5">
-              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-3">
-                <KeyRound className="w-6 h-6 text-amber-600" />
-              </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Recuperar Palavra-passe</h2>
-              <p className="text-xs text-slate-500 mt-1">Insira o e-mail institucional registado para receber o link de reposição.</p>
-            </div>
+            {isForgotSuccess ? (
+              <div className="text-center py-3">
+                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Instruções Enviadas!</h2>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Enviámos um link seguro de reposição para{' '}
+                  <span className="font-bold text-slate-900">{forgotEmail}</span>.
+                </p>
 
-            <form onSubmit={handleForgotSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">E-mail @ucm.ac.mz</label>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="estudante@ucm.ac.mz"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  className="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
-                />
-              </div>
+                <div className="my-4 p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-left text-xs text-amber-900 leading-relaxed">
+                  💡 <strong>Dica de Segurança UCM:</strong> Verifique a caixa de entrada do seu e-mail da universidade. Se não encontrar a mensagem em alguns instantes, verifique também a pasta de <strong>Spam / Lixo Eletrónico</strong>.
+                </div>
 
-              <div className="flex space-x-3 pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setIsForgotModal(false);
+                    setIsForgotSuccess(false);
                     setIsLoginModal(true);
                   }}
-                  className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm min-h-[46px] transition-colors"
+                  className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm min-h-[46px] shadow-md transition-all cursor-pointer"
                 >
-                  Voltar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')}
-                  className={`w-1/2 py-3 font-bold rounded-xl text-sm min-h-[46px] shadow-md transition-all flex items-center justify-center ${
-                    isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white'
-                  }`}
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enviar Link'}
+                  Voltar ao Login
                 </button>
               </div>
-            </form>
+            ) : (
+              <>
+                <div className="mb-5">
+                  <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-3">
+                    <KeyRound className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Recuperar Palavra-passe</h2>
+                  <p className="text-xs text-slate-500 mt-1">Insira o e-mail institucional registado para receber o link de reposição.</p>
+                </div>
+
+                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">E-mail @ucm.ac.mz</label>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      placeholder="estudante@ucm.ac.mz"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
+                    />
+                  </div>
+
+                  <div className="flex space-x-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotModal(false);
+                        setIsLoginModal(true);
+                      }}
+                      className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm min-h-[46px] transition-colors"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')}
+                      className={`w-1/2 py-3 font-bold rounded-xl text-sm min-h-[46px] shadow-md transition-all flex items-center justify-center ${
+                        isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white'
+                      }`}
+                    >
+                      {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Enviar Link'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}

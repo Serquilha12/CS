@@ -9,6 +9,7 @@ import { Marketplace } from './pages/Marketplace';
 import { ListingDetail } from './pages/ListingDetail';
 import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 // Code Splitting (React.lazy) para isolar o código do Administrador
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -38,8 +39,9 @@ export default function App() {
           <Router>
             <div className="min-h-screen bg-slate-50 pb-20">
               <Routes>
-                {/* Rota Aberta de Entrada */}
+                {/* Rota Aberta de Entrada e Redefinição de Palavra-passe */}
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 {/* Rotas Protegidas do Mercado e Utilizadores Autenticados */}
                 <Route
