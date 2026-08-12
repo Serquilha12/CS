@@ -41,6 +41,8 @@ export function AuthProvider({ children }) {
       const res = await fetchApi('/auth/me');
       if (res.success && res.data) {
         setUser(res.data);
+      } else {
+        setUser(null);
       }
     } catch (e) {
       setUser(null);
@@ -55,8 +57,12 @@ export function AuthProvider({ children }) {
       body: { email, password }
     });
 
-    if (res.success && res.data?.profile) {
-      setUser(res.data.profile);
+    if (res.success && res.data) {
+      if (res.data.token) {
+        localStorage.setItem('cs_token', res.data.token);
+      }
+      const profile = res.data.profile || res.data.user || res.data;
+      setUser(profile);
     }
     return res;
   }
@@ -67,8 +73,12 @@ export function AuthProvider({ children }) {
       body: data
     });
 
-    if (res.success && res.data?.profile) {
-      setUser(res.data.profile);
+    if (res.success && res.data) {
+      if (res.data.token) {
+        localStorage.setItem('cs_token', res.data.token);
+      }
+      const profile = res.data.profile || res.data.user || res.data;
+      setUser(profile);
     }
     return res;
   }
@@ -77,6 +87,7 @@ export function AuthProvider({ children }) {
     try {
       await fetchApi('/auth/logout', { method: 'POST' });
     } catch (e) {}
+    localStorage.removeItem('cs_token');
     setUser(null);
   }
 

@@ -1,12 +1,16 @@
 const API_BASE_URL = '/api/v1';
 
 export async function fetchApi(endpoint, options = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('cs_token') : null;
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 
   const config = {
     ...options,
+    credentials: 'include',
     headers: {
       ...defaultHeaders,
       ...options.headers,
