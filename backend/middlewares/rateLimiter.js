@@ -1,9 +1,9 @@
 const rateLimit = require('express-rate-limit');
 
-// Rate limiting para rotas de autenticação (Login/Registo): 5 tentativas por minuto
+// Rate limiting para rotas de autenticação (Login/Registo): 50 tentativas por minuto (ajustado para suportar testes automatizados como TestSprite)
 const authRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 5,
+  max: 50,
   message: {
     success: false,
     error: 'Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.'
