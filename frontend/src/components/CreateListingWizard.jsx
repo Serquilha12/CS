@@ -196,45 +196,61 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Fotografias do Material (Toque para tirar foto ou carregar)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-extrabold text-slate-800">
+                    Fotografias do Material ({formData.images.length}/4)
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-semibold">Opcional, mas recomendado</span>
+                </div>
 
-                <div className="grid grid-cols-3 gap-2.5 mb-2">
-                  {formData.images.map((imgUrl, idx) => (
-                    <div key={idx} className="relative group rounded-2xl overflow-hidden border border-slate-200 h-24 bg-slate-100">
-                      <img src={imgUrl} alt="Preview" className="w-full h-full object-cover" loading="lazy" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-1 right-1 p-1.5 bg-slate-900/80 text-white rounded-full hover:bg-rose-600 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                {/* Pré-visualizações das imagens adicionadas */}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {formData.images.map((imgUrl, idx) => (
+                      <div key={idx} className="relative group rounded-2xl overflow-hidden border border-slate-200 h-20 bg-slate-100 shadow-xs">
+                        <img src={imgUrl} alt="Preview" className="w-full h-full object-cover" loading="lazy" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="absolute top-1 right-1 p-1 bg-slate-900/80 hover:bg-rose-600 text-white rounded-full transition-colors min-h-[26px] min-w-[26px] flex items-center justify-center"
+                          title="Remover foto"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  {formData.images.length < 4 && (
-                    <div className="border-2 border-dashed border-slate-300 hover:border-persian rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 bg-platinum/60 hover:bg-persian-light/40 min-h-[96px]">
-                      {uploading ? (
-                        <div className="flex flex-col items-center">
-                          <Loader2 className="w-6 h-6 text-persian animate-spin mb-1" />
-                          <span className="text-[9px] text-slate-500 font-bold">A otimizar imagem...</span>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                {/* Painel de Ações de Upload / Câmera */}
+                {formData.images.length < 4 && (
+                  <div className="bg-slate-50 border-2 border-dashed border-slate-300 hover:border-persian rounded-2xl p-3.5 transition-all">
+                    {uploading ? (
+                      <div className="flex flex-col items-center justify-center py-3">
+                        <Loader2 className="w-6 h-6 text-persian animate-spin mb-1.5" />
+                        <span className="text-xs font-bold text-slate-700">A otimizar e carregar fotografia...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        <p className="text-[11px] font-bold text-slate-600 text-center">
+                          Adicione fotos do seu material com a Câmera ou da Galeria:
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {/* Opção 1: Tirar Foto com Câmera */}
                           <button
                             type="button"
                             onClick={() => setIsCameraOpen(true)}
-                            className="flex-1 min-w-[110px] py-2 px-3 bg-persian hover:bg-persian-hover text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center space-x-1.5 shadow-xs transition-all min-h-[40px]"
+                            className="py-3 px-4 bg-persian hover:bg-persian-hover text-white rounded-xl text-xs font-extrabold flex items-center justify-center space-x-2 shadow-md shadow-persian/20 transition-all active:scale-95 min-h-[46px]"
                           >
-                            <Camera className="w-4 h-4 text-carrot" />
-                            <span>Tirar Foto (Câmera)</span>
+                            <Camera className="w-5 h-5 text-carrot" />
+                            <span>Tirar Foto com Câmera</span>
                           </button>
 
-                          <label className="flex-1 min-w-[110px] py-2 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer transition-all min-h-[40px]">
-                            <ImageIcon className="w-4 h-4 text-persian" />
-                            <span>Galeria</span>
+                          {/* Opção 2: Escolher da Galeria */}
+                          <label className="py-3 px-4 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-2 shadow-xs cursor-pointer transition-all active:scale-95 min-h-[46px]">
+                            <ImageIcon className="w-5 h-5 text-persian" />
+                            <span>Escolher da Galeria</span>
                             <input
                               type="file"
                               accept="image/*"
@@ -244,10 +260,10 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                             />
                           </label>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
