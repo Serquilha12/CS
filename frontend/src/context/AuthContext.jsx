@@ -63,8 +63,9 @@ export function AuthProvider({ children }) {
       }
       const profile = res.data.profile || res.data.user || res.data;
       setUser(profile);
+      return profile;
     }
-    return res;
+    return null;
   }
 
   async function register(data) {
@@ -79,8 +80,9 @@ export function AuthProvider({ children }) {
       }
       const profile = res.data.profile || res.data.user || res.data;
       setUser(profile);
+      return profile;
     }
-    return res;
+    return null;
   }
 
   async function logout() {

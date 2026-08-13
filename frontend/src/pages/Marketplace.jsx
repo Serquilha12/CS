@@ -151,7 +151,7 @@ export function Marketplace() {
       return;
     }
 
-    if (item.owner_id === user.id) {
+    if (item.owner_id === user?.id) {
       showToast('Este é o seu próprio anúncio.', 'info');
       navigate(`/item/${item.id}`);
       return;

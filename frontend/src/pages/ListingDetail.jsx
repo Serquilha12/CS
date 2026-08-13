@@ -41,7 +41,7 @@ export function ListingDetail() {
       return;
     }
 
-    if (listing?.owner_id === user.id) {
+    if (listing?.owner_id === user?.id) {
       showToast('Este é o seu próprio anúncio.', 'info');
       return;
     }
