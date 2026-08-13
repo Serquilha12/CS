@@ -42,5 +42,6 @@ export function useListings(activeFilters = {}) {
     return res;
   }
 
-  return { listings, loading, error, setFilters, refresh: loadListings, createListing };
+  return { listings, loading, error, refresh: loadListings, createListing };
 }
+
