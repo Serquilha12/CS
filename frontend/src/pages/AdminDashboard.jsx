@@ -617,7 +617,7 @@ export default function AdminDashboard() {
                 onClick={() => setSelectedReport(null)}
                 className="text-slate-400 hover:text-slate-700 font-bold p-1"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
