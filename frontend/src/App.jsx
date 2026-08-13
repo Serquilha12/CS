@@ -26,8 +26,7 @@ function ProtectedRoute({ children }) {
 function AdminRoute({ children }) {
   const { user, loading, isAdmin } = useContext(AuthContext);
   if (loading) return null;
-  if (!user) return <Navigate to="/" replace />;
-  if (!isAdmin) return <Navigate to="/marketplace" replace />;
+  if (!user || !isAdmin) return <Navigate to="/" replace />;
   return children;
 }
 

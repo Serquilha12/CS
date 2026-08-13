@@ -13,6 +13,28 @@ export function ToastProvider({ children }) {
     }, duration);
   }
 
+  React.useEffect(() => {
+    function handleNetworkError(e) {
+      showToast(e.detail || 'Sem ligação à rede Wi-Fi do campus.', 'error', 5000);
+    }
+    function handleOffline() {
+      showToast('Ligação Wi-Fi perdida. A trabalhar em modo offline.', 'warning', 5000);
+    }
+    function handleOnline() {
+      showToast('Ligação à Internet restabelecida!', 'success', 3000);
+    }
+
+    window.addEventListener('cs-network-error', handleNetworkError);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('cs-network-error', handleNetworkError);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+
   function hideToast() {
     setToast(null);
   }

@@ -35,9 +35,10 @@ export function LandingPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [isForgotSuccess, setIsForgotSuccess] = useState(false);
 
-  // Validação em Tempo Real de E-mail UCM
-  const isLoginEmailValid = loginData.email.toLowerCase().trim().endsWith('@ucm.ac.mz');
-  const isRegEmailValid = regData.email.toLowerCase().trim().endsWith('@ucm.ac.mz');
+  // Validação em Tempo Real de E-mail UCM com RegEx estrito
+  const UCM_EMAIL_REGEX = /^[\w-\.]+@ucm\.ac\.mz$/i;
+  const isLoginEmailValid = UCM_EMAIL_REGEX.test(loginData.email.trim());
+  const isRegEmailValid = UCM_EMAIL_REGEX.test(regData.email.trim());
 
   async function handleLoginSubmit(e) {
     e.preventDefault();

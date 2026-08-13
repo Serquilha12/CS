@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.listings (
     transaction_type VARCHAR(20) NOT NULL DEFAULT 'venda' CHECK (transaction_type IN ('venda', 'troca', 'doacao', 'emprestimo')),
     course VARCHAR(100) NOT NULL,
     campus_location VARCHAR(100) NOT NULL DEFAULT 'Biblioteca Central',
-    status VARCHAR(25) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'negotiating', 'reserved', 'sold', 'removed')),
+    status VARCHAR(25) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'negotiating', 'reserved', 'sold', 'removed', 'suspended')),
     images TEXT[] DEFAULT ARRAY[]::TEXT[],
     view_count INT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

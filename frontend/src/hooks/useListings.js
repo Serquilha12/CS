@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react';
 import { fetchApi } from '../services/api';
 
-export function useListings(initialFilters = {}) {
+export function useListings(activeFilters = {}) {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState(initialFilters);
+
+  const filtersKey = JSON.stringify(activeFilters);
 
   useEffect(() => {
     loadListings();
-  }, [filters]);
+  }, [filtersKey]);
 
   async function loadListings() {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams(filters).toString();
+      const cleanFilters = {};
+      Object.keys(activeFilters).forEach(key => {
+        if (activeFilters[key]) cleanFilters[key] = activeFilters[key];
+      });
+      const queryParams = new URLSearchParams(cleanFilters).toString();
       const res = await fetchApi(`/listings?${queryParams}`);
       if (res.success) {
         setListings(res.data.listings || []);

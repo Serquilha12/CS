@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Camera, UploadCloud, CheckCircle, ArrowRight, ArrowLeft, Loader2, X, Zap, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { useToast } from '../context/ToastContext';
@@ -12,6 +12,8 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
   const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const submittingRef = useRef(false);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -113,7 +115,7 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (submittingRef.current || isSubmitting) return;
 
     const isFree = formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo';
     if (!isFree && (formData.price_mzn === '' || formData.price_mzn === undefined)) {
@@ -122,6 +124,7 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     }
 
     try {
+      submittingRef.current = true;
       setIsSubmitting(true);
       await onSubmit({
         ...formData,
@@ -129,6 +132,7 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
         images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80']
       });
     } catch (err) {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   }

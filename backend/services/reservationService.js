@@ -11,8 +11,8 @@ class ReservationService {
 
     if (listErr || !listing) throw new Error('Anúncio não encontrado.');
     if (listing.owner_id === buyerId) throw new Error('Não pode reservar o seu próprio anúncio.');
-    if (listing.status === 'sold' || listing.status === 'removed') {
-      throw new Error('Este anúncio já não se encontra disponível.');
+    if (['reserved', 'sold', 'removed', 'suspended'].includes(listing.status)) {
+      throw new Error('Este anúncio já não se encontra disponível para reserva.');
     }
 
     // Verificar se o comprador já tem uma reserva ativa (pending ou accepted) para este anúncio

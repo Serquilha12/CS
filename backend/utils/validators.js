@@ -1,6 +1,8 @@
 const { z } = require('zod');
 const { ALLOWED_EMAIL_DOMAIN, CATEGORIES, TRANSACTION_TYPES } = require('../config/constants');
 
+const UCM_EMAIL_REGEX = /^[\w-\.]+@ucm\.ac\.mz$/i;
+
 const registerSchema = z.object({
   email: z
     .string({ required_error: 'O e-mail é obrigatório' })
@@ -8,7 +10,7 @@ const registerSchema = z.object({
     .toLowerCase()
     .email('Formato de e-mail inválido')
     .refine(
-      (val) => val.endsWith(ALLOWED_EMAIL_DOMAIN),
+      (val) => UCM_EMAIL_REGEX.test(val),
       `O e-mail deve pertencer obrigatoriamente ao domínio institucional da UCM (${ALLOWED_EMAIL_DOMAIN})`
     ),
   password: z.string().min(6, 'A palavra-passe deve ter no mínimo 6 caracteres'),
@@ -24,7 +26,7 @@ const loginSchema = z.object({
     .toLowerCase()
     .email('Formato de e-mail inválido')
     .refine(
-      (val) => val.endsWith(ALLOWED_EMAIL_DOMAIN),
+      (val) => UCM_EMAIL_REGEX.test(val),
       `Apenas e-mails institucionais da UCM (${ALLOWED_EMAIL_DOMAIN}) são permitidos.`
     ),
   password: z.string().min(1, 'A palavra-passe é obrigatória')

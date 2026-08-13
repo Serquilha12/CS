@@ -31,11 +31,11 @@ export function MaterialCard({ item, onClick, onActionClick, onFavoriteToggle, i
       onClick={onClick}
       className="group bg-white rounded-[28px] border border-slate-200/70 shadow-md hover:shadow-2xl hover:border-persian/40 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden transform hover:-translate-y-1"
     >
-      {/* Área da Imagem do Material com Gradiente Persian Blue / Slate */}
-      <div className="relative w-full h-56 bg-slate-900 overflow-hidden">
+      {/* Área da Imagem do Material com Gradiente Persian Blue / Slate (aspect-square object-cover) */}
+      <div className="relative w-full aspect-square bg-slate-900 overflow-hidden">
         {item.images?.[0] && !imageError ? (
           <img
-            src={getOptimizedImageUrl(item.images[0], 400, 300)}
+            src={getOptimizedImageUrl(item.images[0], 400, 400)}
             alt={item.title}
             loading="lazy"
             onError={() => setImageError(true)}

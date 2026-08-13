@@ -143,10 +143,10 @@ class AdminService {
   }
 
   async removeListing(adminId, listingId, reason = 'Violação dos Termos UCM') {
-    // Utiliza 'removed' para respeitar a restrição (CHECK constraint "listings_status_check") da tabela listings
+    // Define status = 'suspended' conforme especificado na política de moderação
     const { data, error } = await supabaseAdmin
       .from('listings')
-      .update({ status: 'removed', updated_at: new Date() })
+      .update({ status: 'suspended', updated_at: new Date() })
       .eq('id', listingId)
       .select('*, profiles:owner_id(full_name, email)')
       .single();
@@ -200,10 +200,10 @@ class AdminService {
 
     if (error) throw new Error(error.message);
 
-    // Ocultar e remover do feed todos os anúncios ativos do utilizador suspenso (usando 'removed')
+    // Ocultar e suspender do feed todos os anúncios associados ao utilizador suspenso (status='suspended')
     await supabaseAdmin
       .from('listings')
-      .update({ status: 'removed', updated_at: new Date() })
+      .update({ status: 'suspended', updated_at: new Date() })
       .eq('owner_id', userId);
 
     // Resolver denúncias pendentes associadas a este utilizador
