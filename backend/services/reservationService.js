@@ -15,6 +15,21 @@ class ReservationService {
       throw new Error('Este anúncio já não se encontra disponível.');
     }
 
+    // Verificar se o comprador já tem uma reserva ativa (pending ou accepted) para este anúncio
+    const { data: existingReservation } = await supabaseAdmin
+      .from('reservations')
+      .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+      .eq('listing_id', listing_id)
+      .eq('buyer_id', buyerId)
+      .in('status', ['pending', 'accepted'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingReservation) {
+      return existingReservation;
+    }
+
     // Criar a reserva
     const { data: reservation, error: resErr } = await supabaseAdmin
       .from('reservations')
@@ -22,7 +37,7 @@ class ReservationService {
         listing_id,
         buyer_id: buyerId,
         seller_id: listing.owner_id,
-        agreed_price_mzn: agreed_price_mzn !== undefined ? agreed_price_mzn : listing.price_mzn,
+        agreed_price_mzn: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : listing.price_mzn,
         meeting_point: meeting_point || listing.campus_location || 'Biblioteca Central - UCM Pemba',
         status: 'pending',
         buyer_confirmed: false,
@@ -33,11 +48,13 @@ class ReservationService {
 
     if (resErr) throw new Error(resErr.message);
 
-    // Sinalizar o anúncio em negociação
-    await supabaseAdmin
-      .from('listings')
-      .update({ status: 'negotiating', updated_at: new Date() })
-      .eq('id', listing_id);
+    // Sinalizar o anúncio em negociação apenas se estiver ativo
+    if (listing.status === 'active') {
+      await supabaseAdmin
+        .from('listings')
+        .update({ status: 'negotiating', updated_at: new Date() })
+        .eq('id', listing_id);
+    }
 
     return reservation;
   }

@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
 import { fetchApi } from '../services/api';
 
-export function useChat(listingId, otherUserId) {
+export function useChat(param1, param2) {
+  let listingId, otherUserId;
+  if (typeof param1 === 'object' && param1 !== null) {
+    listingId = param1.listingId;
+    otherUserId = param1.receiverId || param1.otherUserId;
+  } else {
+    listingId = param1;
+    otherUserId = param2;
+  }
+
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (listingId && otherUserId) {
@@ -26,6 +35,10 @@ export function useChat(listingId, otherUserId) {
   }
 
   async function sendMessage(text) {
+    if (!listingId || !otherUserId) {
+      throw new Error('Destinatário ou anúncio não identificados para envio de mensagem.');
+    }
+
     const res = await fetchApi('/chat/messages', {
       method: 'POST',
       body: {

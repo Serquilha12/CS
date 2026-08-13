@@ -37,6 +37,12 @@ export function ListingDetail() {
   async function handleReserveListing() {
     if (!user) {
       showToast('Inicie sessão para solicitar reserva de materiais.', 'warning');
+      navigate('/login');
+      return;
+    }
+
+    if (listing?.owner_id === user.id) {
+      showToast('Este é o seu próprio anúncio.', 'info');
       return;
     }
 
@@ -47,8 +53,8 @@ export function ListingDetail() {
         body: {
           listing_id: id,
           seller_id: listing.owner_id,
-          agreed_price_mzn: listing.price_mzn,
-          meeting_point: listing.campus_location
+          agreed_price_mzn: listing.price_mzn !== undefined && listing.price_mzn !== null ? Number(listing.price_mzn) : 0,
+          meeting_point: listing.campus_location || 'Biblioteca Central'
         }
       });
 

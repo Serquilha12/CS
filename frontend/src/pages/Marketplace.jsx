@@ -77,7 +77,7 @@ export function Marketplace() {
         body: {
           listing_id: item.id,
           seller_id: item.owner_id,
-          agreed_price_mzn: item.price_mzn,
+          agreed_price_mzn: item.price_mzn !== undefined && item.price_mzn !== null ? Number(item.price_mzn) : 0,
           meeting_point: item.campus_location || 'Biblioteca Central'
         }
       });

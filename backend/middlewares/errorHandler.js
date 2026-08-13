@@ -30,7 +30,12 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  if (rawMessage.includes('duplicate key value violates unique constraint') || rawMessage.includes('already registered')) {
+  if (
+    rawMessage.includes('profiles_email_key') ||
+    rawMessage.includes('users_email_key') ||
+    (rawMessage.includes('duplicate key') && rawMessage.includes('email')) ||
+    rawMessage.includes('already registered')
+  ) {
     return res.status(409).json({
       success: false,
       error: 'Este e-mail institucional já se encontra registado na plataforma.'
