@@ -5,6 +5,9 @@ import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useChat } from '../hooks/useChat';
 import { fetchApi } from '../services/api';
+import { CameraModal } from '../components/CameraModal';
+import { compressImage } from '../utils/imageCompressor';
+import { supabase } from '../services/supabaseClient';
 
 export function ChatPage() {
   const { user } = useContext(AuthContext);
@@ -19,6 +22,8 @@ export function ChatPage() {
   const [reservation, setReservation] = useState(null);
   const [loadingReservation, setLoadingReservation] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Estado para Modal de Motivo de Cancelamento
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
@@ -129,7 +134,57 @@ export function ChatPage() {
   }
 
   function handleAttachPhoto() {
-    showToast('Selecione uma fotografia adicional para enviar na conversa.', 'info');
+    setIsCameraOpen(true);
+  }
+
+  async function handleCameraPhotoCapture(rawFile) {
+    if (!rawFile) return;
+
+    try {
+      setIsUploadingPhoto(true);
+      showToast('A otimizar fotografia capturada...', 'info');
+
+      const compressedFile = await compressImage(rawFile, 1024, 1024, 0.8);
+      let publicUrl = null;
+      const fileName = `chat/${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
+
+      const { data: storageData, error: storageErr } = await supabase.storage
+        .from('listing-images')
+        .upload(fileName, compressedFile, {
+          contentType: 'image/webp',
+          upsert: true
+        });
+
+      if (!storageErr && storageData) {
+        const { data: urlData } = supabase.storage
+          .from('listing-images')
+          .getPublicUrl(fileName);
+        publicUrl = urlData.publicUrl;
+      } else {
+        const bodyData = new FormData();
+        bodyData.append('image', compressedFile);
+
+        const response = await fetch('/api/v1/upload/image', {
+          method: 'POST',
+          body: bodyData
+        });
+        const res = await response.json();
+        if (res.success && res.data?.url) {
+          publicUrl = res.data.url;
+        }
+      }
+
+      if (publicUrl) {
+        await sendMessage(`📷 [Fotografia do Material] ${publicUrl}`);
+        showToast('Fotografia enviada com sucesso na conversa!', 'success');
+      } else {
+        throw new Error('Não foi possível carregar a foto para a conversa.');
+      }
+    } catch (err) {
+      showToast(err.message || 'Erro ao enviar foto.', 'error');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   }
 
   const isSeller = activeListing?.owner_id === user?.id;
@@ -431,6 +486,13 @@ export function ChatPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Captura com Câmera ao Vivo para o Chat */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={handleCameraPhotoCapture}
+      />
     </div>
   );
 }

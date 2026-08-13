@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Camera, UploadCloud, CheckCircle, ArrowRight, ArrowLeft, Loader2, X, Zap, Sparkles } from 'lucide-react';
+import { Camera, UploadCloud, CheckCircle, ArrowRight, ArrowLeft, Loader2, X, Zap, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../services/supabaseClient';
 import { compressImage } from '../utils/imageCompressor';
+import { CameraModal } from './CameraModal';
 
 export function CreateListingWizard({ onSubmit, onCancel }) {
   const [step, setStep] = useState(1);
   const { showToast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -31,8 +33,7 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     }));
   }
 
-  async function handleImageFileChange(e) {
-    const rawFile = e.target.files?.[0];
+  async function processAndUploadFile(rawFile) {
     if (!rawFile) return;
 
     try {
@@ -82,6 +83,11 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     } finally {
       setUploading(false);
     }
+  }
+
+  function handleImageFileChange(e) {
+    const rawFile = e.target.files?.[0];
+    if (rawFile) processAndUploadFile(rawFile);
   }
 
   function removeImage(index) {
@@ -209,29 +215,37 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                   ))}
 
                   {formData.images.length < 4 && (
-                    <label className="border-2 border-dashed border-slate-300 hover:border-persian rounded-2xl h-24 flex flex-col items-center justify-center cursor-pointer transition-colors bg-platinum/60 hover:bg-persian-light/40 min-h-[48px]">
+                    <div className="border-2 border-dashed border-slate-300 hover:border-persian rounded-2xl p-3 flex flex-col items-center justify-center space-y-2 bg-platinum/60 hover:bg-persian-light/40 min-h-[96px]">
                       {uploading ? (
                         <div className="flex flex-col items-center">
                           <Loader2 className="w-6 h-6 text-persian animate-spin mb-1" />
-                          <span className="text-[9px] text-slate-500 font-bold">A otimizar...</span>
+                          <span className="text-[9px] text-slate-500 font-bold">A otimizar imagem...</span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center text-center p-2">
-                          <div className="flex items-center space-x-1 mb-1 text-persian">
-                            <Camera className="w-5 h-5 text-persian" />
-                            <UploadCloud className="w-5 h-5 text-carrot" />
-                          </div>
-                          <span className="text-[10px] font-black text-slate-700">Tirar Foto / Upload</span>
+                        <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                          <button
+                            type="button"
+                            onClick={() => setIsCameraOpen(true)}
+                            className="flex-1 min-w-[110px] py-2 px-3 bg-persian hover:bg-persian-hover text-white rounded-xl text-[11px] font-extrabold flex items-center justify-center space-x-1.5 shadow-xs transition-all min-h-[40px]"
+                          >
+                            <Camera className="w-4 h-4 text-carrot" />
+                            <span>Tirar Foto (Câmera)</span>
+                          </button>
+
+                          <label className="flex-1 min-w-[110px] py-2 px-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-[11px] font-bold flex items-center justify-center space-x-1.5 shadow-xs cursor-pointer transition-all min-h-[40px]">
+                            <ImageIcon className="w-4 h-4 text-persian" />
+                            <span>Galeria</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageFileChange}
+                              disabled={uploading}
+                              className="hidden"
+                            />
+                          </label>
                         </div>
                       )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageFileChange}
-                        disabled={uploading}
-                        className="hidden"
-                      />
-                    </label>
+                    </div>
                   )}
                 </div>
               </div>
@@ -423,6 +437,13 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
           )}
         </div>
       </form>
+
+      {/* Modal de Captura de Câmera em Tempo Real */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={processAndUploadFile}
+      />
     </div>
   );
 }
