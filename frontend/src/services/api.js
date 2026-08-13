@@ -46,6 +46,14 @@ export async function fetchApi(endpoint, options = {}) {
   }
 
   if (!response.ok) {
+    // Intercepção centralizada de sessão expirada
+    if (response.status === 401) {
+      localStorage.removeItem('cs_token');
+      // Evitar redirect loop se já estiver na página inicial
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.dispatchEvent(new CustomEvent('cs-session-expired'));
+      }
+    }
     throw new Error(data.error || 'Erro ao comunicar com o servidor.');
   }
 

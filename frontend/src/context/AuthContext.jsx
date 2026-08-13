@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '../services/api';
 
 export const AuthContext = createContext();
@@ -9,6 +9,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     checkAuthSession();
+  }, []);
+
+  // Ouvir evento global de sessão expirada (emitido pelo fetchApi ao receber 401)
+  useEffect(() => {
+    function handleSessionExpired() {
+      setUser(null);
+      localStorage.removeItem('cs_token');
+      // Redirecionar para a página inicial
+      if (window.location.pathname !== '/') {
+        window.location.replace('/');
+      }
+    }
+    window.addEventListener('cs-session-expired', handleSessionExpired);
+    return () => window.removeEventListener('cs-session-expired', handleSessionExpired);
   }, []);
 
   // Temporizador de Inatividade (15 minutos = 900.000 ms) para computadores da faculdade

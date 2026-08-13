@@ -217,7 +217,7 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className={`w-full p-3.5 pr-10 border rounded-xl text-sm transition-all focus:outline-none min-h-[46px] ${
+                    className={`w-full p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[46px] ${
                       loginData.email.length > 0
                         ? isLoginEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -264,7 +264,7 @@ export function LandingPage() {
                     placeholder="••••••••"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="w-full p-3.5 pr-11 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
+                    className="w-full p-3.5 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
                   />
                   <button
                     type="button"
@@ -344,7 +344,7 @@ export function LandingPage() {
                   placeholder="Ex: Ancha Jussa"
                   value={regData.full_name}
                   onChange={(e) => setRegData({ ...regData, full_name: e.target.value })}
-                  className="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[44px]"
+                  className="w-full p-3 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[44px]"
                 />
               </div>
 
@@ -353,7 +353,7 @@ export function LandingPage() {
                 <select
                   value={regData.course}
                   onChange={(e) => setRegData({ ...regData, course: e.target.value })}
-                  className="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[44px] bg-white"
+                  className="w-full p-3 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[44px] bg-white"
                 >
                   {UCM_COURSES.map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -371,7 +371,7 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={regData.email}
                     onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className={`w-full p-3 pr-10 border rounded-xl text-sm focus:outline-none min-h-[44px] ${
+                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[44px] ${
                       regData.email.length > 0
                         ? isRegEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -391,7 +391,8 @@ export function LandingPage() {
                 </div>
                 {regData.email.length > 0 && !isRegEmailValid && (
                   <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center">
-                    ❌ Apenas e-mails com @ucm.ac.mz são permitidos
+                    <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                    Apenas e-mails com @ucm.ac.mz são permitidos
                   </p>
                 )}
               </div>
@@ -406,7 +407,7 @@ export function LandingPage() {
                     placeholder="••••••••"
                     value={regData.password}
                     onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    className="w-full p-3 pr-11 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[44px]"
+                    className="w-full p-3 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
                   />
                   <button
                     type="button"
@@ -492,9 +493,11 @@ export function LandingPage() {
                   <span className="font-bold text-slate-900">{forgotEmail}</span>.
                 </p>
 
-                <div className="my-4 p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-left text-xs text-amber-900 leading-relaxed">
-                  💡 <strong>Dica de Segurança UCM:</strong> Verifique a caixa de entrada do seu e-mail da universidade. Se não encontrar a mensagem em alguns instantes, verifique também a pasta de <strong>Spam / Lixo Eletrónico</strong>.
+                <div className="my-4 p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-left text-xs text-amber-900 leading-relaxed flex items-start space-x-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span><strong>Dica de Segurança UCM:</strong> Verifique a caixa de entrada do seu e-mail da universidade. Se não encontrar a mensagem em alguns instantes, verifique também a pasta de <strong>Spam / Lixo Eletrónico</strong>.</span>
                 </div>
+
 
                 <button
                   type="button"
@@ -528,7 +531,7 @@ export function LandingPage() {
                       placeholder="estudante@ucm.ac.mz"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
+                      className="w-full p-3.5 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[46px]"
                     />
                   </div>
 

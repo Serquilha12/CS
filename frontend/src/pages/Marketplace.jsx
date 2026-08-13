@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Search, SlidersHorizontal, Bell, Plus, X, ChevronDown, Check, Tag, Zap } from 'lucide-react';
+import { 
+  Search, SlidersHorizontal, Bell, Plus, X, ChevronDown, Check, Tag, Zap,
+  Globe, BookOpen, Calculator, Laptop, Pencil, FlaskConical, Package,
+  ShoppingBag, Repeat, Gift, Handshake, DollarSign
+} from 'lucide-react';
 import { useListings } from '../hooks/useListings';
 import { useToast } from '../context/ToastContext';
 import { AuthContext } from '../context/AuthContext';
@@ -11,22 +15,26 @@ import { MaterialCard } from '../components/MaterialCard';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-// Ícones de categoria para chips visuais
-const CATEGORY_ICONS = {
-  'Manuais e Livros': '📚',
-  'Calculadoras': '🔢',
-  'Informática & Gadgets': '💻',
-  'Material de Desenho': '✏️',
-  'Laboratório': '🧪',
-  'Outros': '📦',
-};
+function renderCategoryIcon(cat) {
+  switch (cat) {
+    case 'Manuais e Livros': return <BookOpen className="w-4 h-4 text-emerald-600 shrink-0" />;
+    case 'Calculadoras': return <Calculator className="w-4 h-4 text-sky-600 shrink-0" />;
+    case 'Informática & Gadgets': return <Laptop className="w-4 h-4 text-indigo-600 shrink-0" />;
+    case 'Material de Desenho': return <Pencil className="w-4 h-4 text-amber-600 shrink-0" />;
+    case 'Laboratório': return <FlaskConical className="w-4 h-4 text-purple-600 shrink-0" />;
+    default: return <Package className="w-4 h-4 text-slate-500 shrink-0" />;
+  }
+}
 
-const TRANSACTION_ICONS = {
-  'venda': '🛒',
-  'troca': '🔄',
-  'doacao': '🎁',
-  'emprestimo': '🤝',
-};
+function renderTransactionIcon(type) {
+  switch (type) {
+    case 'venda': return <ShoppingBag className="w-4 h-4 text-emerald-600 shrink-0" />;
+    case 'troca': return <Repeat className="w-4 h-4 text-sky-600 shrink-0" />;
+    case 'doacao': return <Gift className="w-4 h-4 text-amber-600 shrink-0" />;
+    case 'emprestimo': return <Handshake className="w-4 h-4 text-indigo-600 shrink-0" />;
+    default: return <Tag className="w-4 h-4 text-slate-500 shrink-0" />;
+  }
+}
 
 const PRICE_RANGES = [
   { id: 'low', label: 'Até 500 MZN', max: 500, min: 0 },
@@ -102,7 +110,6 @@ export function Marketplace() {
       const range = PRICE_RANGES.find(r => r.id === selectedPriceRange);
       if (range) {
         const price = Number(item.price_mzn) || 0;
-        // Doação e Empréstimo são sempre grátis — ignorar filtro de preço para eles
         const isFree = item.transaction_type === 'doacao' || item.transaction_type === 'emprestimo';
         if (!isFree && (price < range.min || price > range.max)) return false;
       }
@@ -146,8 +153,8 @@ export function Marketplace() {
 
   async function handleActionClick(item) {
     if (!user) {
-      showToast('Inicie sessão para solicitar reserva e negociar materiais.', 'warning');
-      navigate('/login');
+      showToast('Por favor, inicie sessão com o seu e-mail UCM para solicitar reservas.', 'warning');
+      navigate('/');
       return;
     }
 
@@ -165,16 +172,21 @@ export function Marketplace() {
           listing_id: item.id,
           seller_id: item.owner_id,
           agreed_price_mzn: item.price_mzn !== undefined && item.price_mzn !== null ? Number(item.price_mzn) : 0,
-          meeting_point: item.campus_location || 'Biblioteca Central'
+          meeting_point: item.campus_location || 'Biblioteca Central - UCM Pemba'
         }
       });
 
       if (res.success) {
-        showToast('Reserva solicitada! A abrir a conversa em tempo real no Chat...', 'success');
+        showToast('Reserva solicitada! A abrir a conversa no Chat...', 'success');
         navigate('/chat', { state: { listing: { ...item, status: 'negotiating' } } });
       }
     } catch (err) {
-      showToast(err.message || 'Erro ao iniciar negociação.', 'error');
+      if (err.message?.includes('Sessão inválida') || err.message?.includes('Token não fornecido')) {
+        showToast('A sua sessão expirou. Por favor, volte a iniciar sessão para negociar.', 'warning');
+        navigate('/');
+      } else {
+        showToast(err.message || 'Erro ao iniciar negociação.', 'error');
+      }
     }
   }
 
@@ -195,7 +207,7 @@ export function Marketplace() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto pb-28 relative">
+    <div className="max-w-7xl mx-auto pb-28 relative px-3 sm:px-6">
 
       {/* ─── LAYOUT DESKTOP: SIDEBAR + CONTEÚDO ─── */}
       <div className="flex">
@@ -219,7 +231,7 @@ export function Marketplace() {
                     : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <span>🌐</span>
+                <Globe className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Todas</span>
                 {selectedCategory === '' && <Check className="w-3.5 h-3.5 ml-auto" />}
               </button>
@@ -233,7 +245,7 @@ export function Marketplace() {
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <span>{CATEGORY_ICONS[cat] || '📦'}</span>
+                  {renderCategoryIcon(cat)}
                   <span className="truncate">{cat}</span>
                   {selectedCategory === cat && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
                 </button>
@@ -253,7 +265,8 @@ export function Marketplace() {
                     : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <span>🔍</span><span>Todos</span>
+                <Search className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>Todos</span>
                 {selectedActionType === '' && <Check className="w-3.5 h-3.5 ml-auto" />}
               </button>
               {TRANSACTION_TYPES.map((type) => (
@@ -266,7 +279,7 @@ export function Marketplace() {
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <span>{TRANSACTION_ICONS[type.id]}</span>
+                  {renderTransactionIcon(type.id)}
                   <span>{type.label}</span>
                   {selectedActionType === type.id && <Check className="w-3.5 h-3.5 ml-auto" />}
                 </button>
@@ -286,7 +299,8 @@ export function Marketplace() {
                     : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <span>💰</span><span>Qualquer preço</span>
+                <DollarSign className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Qualquer preço</span>
                 {selectedPriceRange === '' && <Check className="w-3.5 h-3.5 ml-auto" />}
               </button>
               {PRICE_RANGES.map((range) => (
@@ -326,21 +340,21 @@ export function Marketplace() {
         </aside>
 
         {/* ─── COLUNA PRINCIPAL ─── */}
-        <div className="flex-1 min-w-0 p-4 space-y-3">
+        <div className="flex-1 min-w-0 p-2 sm:p-4 space-y-3">
 
           {/* Header Mobile/Tablet */}
           <div className="flex items-center justify-between pt-1 lg:hidden">
             <div>
-              <h1 className="text-xl font-black text-slate-900 leading-tight">Mercado UCM</h1>
-              <p className="text-[11px] text-slate-400 font-medium">Pemba · Compra, Troca, Doação, Empréstimo</p>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">Mercado UCM</h1>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Pemba · Compra, Troca, Doação, Empréstimo</p>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
-                className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-persian rounded-2xl shadow-xs transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 bg-white border border-slate-200 text-slate-600 hover:text-persian rounded-2xl shadow-xs transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                 title="Notificações"
               >
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={() => setIsWizardOpen(true)}
@@ -351,7 +365,7 @@ export function Marketplace() {
             </div>
           </div>
 
-          {/* Header Desktop (dentro da coluna, sem sidebar duplicada) */}
+          {/* Header Desktop (dentro da coluna) */}
           <div className="hidden lg:flex items-center justify-between pt-2">
             <div>
               <h1 className="text-2xl font-black text-slate-900">Mercado Académico UCM</h1>
@@ -374,7 +388,7 @@ export function Marketplace() {
                 placeholder="Pesquisar manuais, calculadoras, batas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-persian focus:border-persian focus:outline-none text-sm min-h-[46px] transition-all"
+                className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-persian focus:border-persian focus:outline-none text-xs sm:text-sm min-h-[44px] sm:min-h-[46px] transition-all"
               />
               {searchTerm && (
                 <button
@@ -389,7 +403,7 @@ export function Marketplace() {
             {/* Botão Filtrar — só aparece no mobile/tablet */}
             <button
               onClick={openSheet}
-              className={`lg:hidden relative flex items-center space-x-1.5 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all min-h-[46px] shadow-xs ${
+              className={`lg:hidden relative flex items-center space-x-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all min-h-[44px] sm:min-h-[46px] shadow-xs ${
                 activeAdvancedFiltersCount > 0
                   ? 'bg-persian text-white border-persian shadow-persian/30 shadow-md'
                   : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
@@ -407,29 +421,29 @@ export function Marketplace() {
           </div>
 
           {/* ─── CHIPS DE CATEGORIAS (carrossel horizontal) ─── */}
-          <div className="flex space-x-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="flex space-x-2 overflow-x-auto pb-1.5 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
             <button
               onClick={() => setSelectedCategory('')}
-              className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[36px] flex items-center space-x-1.5 border ${
+              className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[34px] sm:min-h-[36px] flex items-center space-x-1.5 border ${
                 selectedCategory === ''
                   ? 'bg-slate-900 text-white border-slate-900 shadow-md'
                   : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
               }`}
             >
-              <span>🌐</span>
+              <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>Todos</span>
             </button>
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[36px] flex items-center space-x-1.5 border ${
+                className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[34px] sm:min-h-[36px] flex items-center space-x-1.5 border ${
                   selectedCategory === cat
                     ? 'bg-slate-900 text-white border-slate-900 shadow-md'
                     : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
                 }`}
               >
-                <span>{CATEGORY_ICONS[cat] || '📦'}</span>
+                {renderCategoryIcon(cat)}
                 <span>{cat}</span>
               </button>
             ))}
@@ -459,7 +473,7 @@ export function Marketplace() {
             </div>
           )}
 
-          {/* ─── GRELHA DE ANÚNCIOS ─── */}
+          {/* ─── GRELHA DE ANÚNCIOS (Totalmente responsiva: 1 col no mobile, 2 no tablet, 3 no desktop) ─── */}
           {loading ? (
             <MarketplaceSkeletonGrid />
           ) : filteredListings.length === 0 ? (
@@ -469,7 +483,7 @@ export function Marketplace() {
               onAction={() => setIsWizardOpen(true)}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
               {filteredListings.map((item) => (
                 <MaterialCard
                   key={item.id}
@@ -496,7 +510,7 @@ export function Marketplace() {
       {/* ─── FAB MOBILE ─── */}
       <button
         onClick={() => setIsWizardOpen(true)}
-        className="fixed bottom-24 right-4 sm:hidden z-40 bg-persian hover:bg-persian-hover active:scale-95 text-white font-extrabold px-5 py-3.5 rounded-full shadow-2xl shadow-persian/50 flex items-center space-x-2 border-2 border-white min-h-[52px]"
+        className="fixed bottom-24 right-4 sm:hidden z-40 bg-persian hover:bg-persian-hover active:scale-95 text-white font-extrabold px-4 py-3 rounded-full shadow-2xl shadow-persian/50 flex items-center space-x-2 border-2 border-white min-h-[48px]"
       >
         <Plus className="w-5 h-5 text-carrot stroke-[3]" />
         <span className="text-xs font-black uppercase tracking-wider">Anunciar</span>
@@ -544,17 +558,18 @@ export function Marketplace() {
                   Tipo de Negócio
                 </p>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {[{ id: '', label: '🔍 Todos' }, ...TRANSACTION_TYPES.map(t => ({ id: t.id, label: `${TRANSACTION_ICONS[t.id]} ${t.label}` }))].map((type) => (
+                  {[{ id: '', label: 'Todos' }, ...TRANSACTION_TYPES.map(t => ({ id: t.id, label: t.label }))].map((type) => (
                     <button
                       key={type.id}
                       onClick={() => setDraftActionType(type.id)}
-                      className={`py-3 px-4 rounded-2xl text-xs font-bold border-2 transition-all min-h-[48px] flex items-center justify-center text-center ${
+                      className={`py-3 px-4 rounded-2xl text-xs font-bold border-2 transition-all min-h-[48px] flex items-center justify-center text-center space-x-2 ${
                         draftActionType === type.id
                           ? 'bg-persian text-white border-persian shadow-md shadow-persian/20'
                           : 'bg-white text-slate-700 border-slate-200 hover:border-persian/50 hover:bg-persian-light/30'
                       }`}
                     >
-                      {type.label}
+                      {type.id ? renderTransactionIcon(type.id) : <Search className="w-4 h-4 shrink-0" />}
+                      <span>{type.label}</span>
                     </button>
                   ))}
                 </div>
@@ -566,7 +581,7 @@ export function Marketplace() {
                   Faixa de Preço
                 </p>
                 <div className="space-y-2">
-                  {[{ id: '', label: '💰 Qualquer preço' }, ...PRICE_RANGES].map((range) => (
+                  {[{ id: '', label: 'Qualquer preço' }, ...PRICE_RANGES].map((range) => (
                     <button
                       key={range.id}
                       onClick={() => setDraftPriceRange(range.id)}
@@ -576,7 +591,10 @@ export function Marketplace() {
                           : 'bg-white text-slate-700 border-slate-200 hover:border-persian/50 hover:bg-persian-light/30'
                       }`}
                     >
-                      <span>{range.label}</span>
+                      <span className="flex items-center space-x-2">
+                        <DollarSign className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>{range.label}</span>
+                      </span>
                       {draftPriceRange === range.id && <Check className="w-4 h-4 shrink-0" />}
                     </button>
                   ))}
@@ -610,3 +628,4 @@ export function Marketplace() {
     </div>
   );
 }
+

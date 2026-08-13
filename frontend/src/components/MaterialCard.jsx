@@ -79,46 +79,46 @@ export function MaterialCard({ item, onClick, onActionClick, onFavoriteToggle, i
       </div>
 
       {/* Conteúdo Principal do Card (Corpo Branco Estilo Card) */}
-      <div className="p-5 flex flex-col flex-1 justify-between space-y-3 bg-white">
+      <div className="p-3.5 sm:p-5 flex flex-col flex-1 justify-between space-y-2.5 sm:space-y-3 bg-white">
         <div>
           {/* Título do Material */}
-          <h3 className="font-extrabold text-slate-900 text-lg tracking-tight line-clamp-1 mb-2 group-hover:text-persian transition-colors">
+          <h3 className="font-extrabold text-slate-900 text-sm sm:text-lg tracking-tight line-clamp-1 mb-1.5 sm:mb-2 group-hover:text-persian transition-colors">
             {item.title}
           </h3>
 
           {/* Tags / Pills de Informação do Material em tom Platinum (#EEEEEE) */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
+          <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
             {item.category && (
-              <span className="px-2.5 py-1 bg-platinum text-slate-800 text-[10px] font-black uppercase tracking-wider rounded-md border border-slate-300/80">
+              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-platinum text-slate-800 text-[9px] sm:text-[10px] font-black uppercase tracking-wider rounded-md border border-slate-300/80">
                 {item.category}
               </span>
             )}
             {item.condition && (
-              <span className="px-2.5 py-1 bg-platinum text-slate-800 text-[10px] font-black uppercase tracking-wider rounded-md border border-slate-300/80">
+              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-platinum text-slate-800 text-[9px] sm:text-[10px] font-black uppercase tracking-wider rounded-md border border-slate-300/80">
                 {item.condition}
               </span>
             )}
             {item.course && (
-              <span className="px-2.5 py-1 bg-persian-light text-persian text-[10px] font-extrabold rounded-md border border-persian/20 line-clamp-1">
+              <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-persian-light text-persian text-[9px] sm:text-[10px] font-extrabold rounded-md border border-persian/20 line-clamp-1">
                 {item.course}
               </span>
             )}
           </div>
 
           {/* Descrição Curta do Material */}
-          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
+          <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-2 leading-relaxed font-normal">
             {item.description || 'Sem descrição detalhada disponível.'}
           </p>
         </div>
 
         {/* Rodapé do Card: Preço e Botão de Ação */}
-        <div className="pt-3 border-t border-slate-100 flex items-end justify-between mt-auto">
+        <div className="pt-2.5 sm:pt-3 border-t border-slate-100 flex items-center justify-between mt-auto gap-2">
           {/* Lado Esquerdo: Rótulo "PREÇO" e Valor */}
-          <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">
+          <div className="shrink-0">
+            <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">
               PREÇO
             </span>
-            <span className="text-lg font-black tracking-tight text-slate-900">
+            <span className="text-sm sm:text-lg font-black tracking-tight text-slate-900">
               {isFree ? (
                 <span className="text-carrot font-extrabold">Grátis</span>
               ) : (
@@ -131,13 +131,14 @@ export function MaterialCard({ item, onClick, onActionClick, onFavoriteToggle, i
           <button
             type="button"
             onClick={handleButtonClick}
-            className="px-4 py-2.5 bg-persian hover:bg-persian-hover text-white font-extrabold text-xs rounded-xl shadow-md shadow-persian/20 hover:shadow-persian/40 transition-all flex items-center space-x-1.5 active:scale-95 min-h-[40px]"
+            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-persian hover:bg-persian-hover text-white font-extrabold text-[11px] sm:text-xs rounded-xl shadow-md shadow-persian/20 hover:shadow-persian/40 transition-all flex items-center space-x-1 active:scale-95 min-h-[38px] sm:min-h-[40px] shrink-0"
           >
-            <span>{actionText}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span className="truncate">{actionText}</span>
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
           </button>
         </div>
       </div>
     </div>
   );
 }
+

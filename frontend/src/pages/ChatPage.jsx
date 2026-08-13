@@ -175,7 +175,7 @@ export function ChatPage() {
       }
 
       if (publicUrl) {
-        await sendMessage(`📷 [Fotografia do Material] ${publicUrl}`);
+        await sendMessage(`[Fotografia do Material] ${publicUrl}`);
         showToast('Fotografia enviada com sucesso na conversa!', 'success');
       } else {
         throw new Error('Não foi possível carregar a foto para a conversa.');
@@ -279,7 +279,7 @@ export function ChatPage() {
           {isReservedByAnother && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center text-xs font-bold text-amber-900">
               <AlertTriangle className="w-5 h-5 mr-2 text-amber-600 shrink-0" />
-              <span>⚠️ Este item acabou de ser reservado por outro colega. Serás notificado caso a reserva seja cancelada.</span>
+              <span>Este item acabou de ser reservado por outro colega. Serás notificado caso a reserva seja cancelada.</span>
             </div>
           )}
 
@@ -290,7 +290,7 @@ export function ChatPage() {
               {reservation.status === 'completed' && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center text-xs font-bold text-emerald-900">
                   <CheckCheck className="w-5 h-5 mr-2 text-emerald-600 shrink-0" />
-                  <span>🎉 Negócio Concluído! O material foi entregue e a transação registada no Painel Pessoal.</span>
+                  <span>Negócio Concluído! O material foi entregue e a transação registada no Painel Pessoal.</span>
                 </div>
               )}
 
