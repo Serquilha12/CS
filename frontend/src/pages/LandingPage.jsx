@@ -158,25 +158,16 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* Lado Direito: Ações Rápidas Elegantes */}
-        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 ml-2">
-          <button
-            onClick={() => {
-              setIsLoginModal(true);
-              setIsRegisterModal(false);
-            }}
-            className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-          >
-            Entrar
-          </button>
+        {/* Lado Direito: Botão Cadastrar */}
+        <div className="flex items-center shrink-0 ml-2">
           <button
             onClick={() => {
               setIsRegisterModal(true);
               setIsLoginModal(false);
             }}
-            className="hidden xs:inline-flex items-center px-3.5 sm:px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
           >
-            Criar Conta
+            Cadastrar
           </button>
         </div>
       </header>
@@ -200,28 +191,17 @@ export function LandingPage() {
           O marketplace interno e seguro para compra, venda, troca e doação de manuais, calculadoras e diversos materiais didaticos entre estudantes.
         </p>
 
-        {/* 3. MICRO-INTERAÇÕES: Botões Squishy com active:scale-[0.97] e Tamanho Tátil */}
-        <div className="pt-5 sm:pt-6 w-full max-w-md flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
-          <button
-            onClick={() => {
-              setIsRegisterModal(true);
-              setIsLoginModal(false);
-            }}
-            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-5 sm:px-6 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white font-bold rounded-2xl shadow-lg shadow-slate-900/15 transition-all duration-200 text-sm sm:text-base flex items-center justify-center cursor-pointer group"
-          >
-            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-ucm-emerald group-hover:scale-110 transition-transform" />
-            <span>Criar Conta UCM</span>
-          </button>
-
+        {/* 3. MICRO-INTERAÇÕES: Botão Único de Entrar com Efeito Squishy */}
+        <div className="pt-5 sm:pt-6 w-full max-w-xs flex justify-center">
           <button
             onClick={() => {
               setIsLoginModal(true);
               setIsRegisterModal(false);
             }}
-            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-5 sm:px-6 bg-white/90 backdrop-blur-sm border-2 border-slate-200 hover:border-ucm-emerald active:scale-[0.97] text-slate-700 hover:text-ucm-darkEmerald font-bold rounded-2xl transition-all duration-200 text-sm sm:text-base flex items-center justify-center shadow-xs cursor-pointer"
+            className="w-full min-h-[48px] py-3.5 px-6 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white font-bold rounded-2xl shadow-lg shadow-slate-900/15 transition-all duration-200 text-sm sm:text-base flex items-center justify-center cursor-pointer group"
           >
-            <LogIn className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-slate-500" />
-            <span>Já tenho Conta</span>
+            <LogIn className="w-5 h-5 mr-2 text-ucm-emerald group-hover:scale-110 transition-transform" />
+            <span>Entrar na Conta</span>
           </button>
         </div>
 
