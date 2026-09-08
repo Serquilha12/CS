@@ -119,7 +119,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-3 sm:p-6 lg:p-8 relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 lg:pt-8 pb-0 relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
       
       {/* MESH GRADIENTS SUAVES NOS CANTOS SUPERIORES */}
       <div 
@@ -459,7 +459,7 @@ export function LandingPage() {
       </main>
 
       {/* 7. FOOTER ESTRUTURADO E PROFISSIONAL */}
-      <footer className="mt-16 sm:mt-20 border-t border-slate-200/80 pt-8 pb-10 text-xs text-slate-500 max-w-5xl mx-auto w-full">
+      <footer className="mt-16 sm:mt-20 border-t border-slate-200/80 pt-8 pb-4 sm:pb-6 mb-0 text-xs text-slate-500 max-w-5xl mx-auto w-full">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2.5">
             <div className="h-7 w-7 px-1 bg-slate-900/5 rounded-lg flex items-center justify-center">

@@ -36,7 +36,7 @@ export default function App() {
       <AuthProvider>
         <WebSocketProvider>
           <Router>
-            <div className="min-h-screen bg-slate-50 pb-20">
+            <div className="min-h-screen bg-slate-50">
               <Routes>
                 {/* Rota Aberta de Entrada e Redefinição de Palavra-passe */}
                 <Route path="/" element={<LandingPage />} />
