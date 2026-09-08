@@ -119,7 +119,7 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6 lg:pt-8 pb-0 relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
       
       {/* MESH GRADIENTS SUAVES NOS CANTOS SUPERIORES */}
       <div 
@@ -136,7 +136,8 @@ export function LandingPage() {
       />
 
       {/* 1. CABEÇALHO FLUTUANTE PREMIUM COM GLASSMORPHISM */}
-      <header className="flex items-center justify-between py-2.5 sm:py-3 px-4 sm:px-6 max-w-5xl mx-auto w-full bg-white/85 backdrop-blur-xl border border-white/80 shadow-[0_4px_25px_-4px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-2xl sm:rounded-3xl sticky top-3 sm:top-4 z-40 transition-all duration-300">
+      <div className="w-full px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6">
+        <header className="flex items-center justify-between py-2.5 sm:py-3 px-4 sm:px-6 max-w-5xl mx-auto w-full bg-white/85 backdrop-blur-xl border border-white/80 shadow-[0_4px_25px_-4px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-2xl sm:rounded-3xl sticky top-3 sm:top-4 z-40 transition-all duration-300">
         
         {/* Identidade / Marca com Logo Oficial em Gradiente */}
         <div className="flex items-center space-x-3 min-w-0">
@@ -172,9 +173,10 @@ export function LandingPage() {
           </button>
         </div>
       </header>
+      </div>
 
       {/* 2. HERO SECTION DE ALTO IMPACTO */}
-      <main className="max-w-5xl mx-auto text-center my-auto py-8 sm:py-16 px-2 flex flex-col items-center w-full">
+      <main className="max-w-5xl mx-auto text-center my-auto py-8 sm:py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full">
         
         {/* Badge Exclusivo */}
         <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-3.5 sm:px-4 py-1.5 bg-white/80 backdrop-blur-md text-ucm-darkEmerald rounded-full text-[11px] sm:text-xs font-bold border border-emerald-200/80 shadow-xs mb-5 max-w-full">
@@ -458,44 +460,46 @@ export function LandingPage() {
 
       </main>
 
-      {/* 7. FOOTER ESTRUTURADO E PROFISSIONAL */}
-      <footer className="mt-16 sm:mt-20 border-t border-slate-200/80 pt-8 pb-4 sm:pb-6 mb-0 text-xs text-slate-500 max-w-5xl mx-auto w-full">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="h-7 w-7 px-1 bg-slate-900/5 rounded-lg flex items-center justify-center">
-              <img src="/logo.png" alt="CS" className="h-4 w-auto object-contain" />
+      {/* 7. FOOTER ESTRUTURADO DE FECHAMENTO COMPLETO (SEM ESPAÇO VAZIO) */}
+      <footer className="w-full bg-white/70 backdrop-blur-md border-t border-slate-200/80 mt-16 sm:mt-24">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-8 text-xs text-slate-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-2.5">
+              <div className="h-7 w-7 px-1 bg-slate-900/5 rounded-lg flex items-center justify-center">
+                <img src="/logo.png" alt="CS" className="h-4 w-auto object-contain" />
+              </div>
+              <span className="font-extrabold text-slate-800 text-sm tracking-tight">CampusStore</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-[11px] text-slate-400">Universidade Católica de Moçambique</span>
             </div>
-            <span className="font-extrabold text-slate-800 text-sm tracking-tight">CampusStore</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-[11px] text-slate-400">Universidade Católica de Moçambique</span>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
+              <button 
+                onClick={() => showToast('As trocas devem ser realizadas exclusivamente em áreas comuns do campus (Biblioteca ou Cantina).', 'info')}
+                className="hover:text-slate-900 transition-colors"
+              >
+                Segurança no Campus
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => showToast('Apenas e-mails institucionais verificados têm permissão para negociar.', 'info')}
+                className="hover:text-slate-900 transition-colors"
+              >
+                Termos de Uso
+              </button>
+              <span>•</span>
+              <button 
+                onClick={() => showToast('Os seus dados e contactos pessoais permanecem privados.', 'info')}
+                className="hover:text-slate-900 transition-colors"
+              >
+                Privacidade
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
-            <button 
-              onClick={() => showToast('As trocas devem ser realizadas exclusivamente em áreas comuns do campus (Biblioteca ou Cantina).', 'info')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Segurança no Campus
-            </button>
-            <span>•</span>
-            <button 
-              onClick={() => showToast('Apenas e-mails institucionais verificados têm permissão para negociar.', 'info')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Termos de Uso
-            </button>
-            <span>•</span>
-            <button 
-              onClick={() => showToast('Os seus dados e contactos pessoais permanecem privados.', 'info')}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Privacidade
-            </button>
+          <div className="mt-6 text-center text-[10px] text-slate-400">
+            © 2026 CampusStore — Plataforma independente desenvolvida para estudantes universitários da UCM Pemba.
           </div>
-        </div>
-
-        <div className="mt-6 text-center text-[10px] text-slate-400">
-          © 2026 CampusStore — Plataforma independente desenvolvida para estudantes universitários da UCM Pemba.
         </div>
       </footer>
 

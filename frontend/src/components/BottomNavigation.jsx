@@ -9,8 +9,8 @@ export function BottomNavigation() {
 
   if (!user) return null;
 
-  // Ocultar a barra inferior quando o utilizador está no fluxo de criação de anúncio (/anunciar)
-  if (location.pathname === '/anunciar') return null;
+  // Ocultar a barra inferior na Landing Page, reset de palavra-passe e criação de anúncio
+  if (location.pathname === '/' || location.pathname === '/reset-password' || location.pathname === '/anunciar') return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-lg border-t border-slate-200/80 z-50 px-2 sm:px-4 py-1 sm:py-2 pb-[calc(0.4rem+env(safe-area-inset-bottom))] flex justify-around items-center shadow-lg transition-all">
