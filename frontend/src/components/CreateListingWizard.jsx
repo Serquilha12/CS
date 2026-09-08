@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Camera, UploadCloud, CheckCircle, ArrowRight, ArrowLeft, Loader2, X, Zap, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
+import { CATEGORIES, TRANSACTION_TYPES, CAMPUS_LOCATIONS, UCM_COURSES } from '../constants';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../services/supabaseClient';
 import { compressImage } from '../utils/imageCompressor';
@@ -21,8 +21,8 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     condition: 'Usado - Excelente',
     price_mzn: '',
     transaction_type: 'venda',
-    course: 'Licenciatura em Tecnologias da Informação',
-    campus_location: 'Biblioteca Central',
+    course: UCM_COURSES[0],
+    campus_location: CAMPUS_LOCATIONS[0],
     images: []
   });
 
@@ -371,6 +371,19 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                   <option value="Usado - Aceitável">Usado - Aceitável</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-800 mb-1">Curso Associado ao Material</label>
+                <select
+                  value={formData.course}
+                  onChange={(e) => setFormData({ ...formData, course: e.target.value })}
+                  className="w-full p-3.5 border border-slate-300 rounded-2xl text-base sm:text-sm focus:ring-2 focus:ring-persian min-h-[48px]"
+                >
+                  {UCM_COURSES.map((course) => (
+                    <option key={course} value={course}>{course}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
@@ -386,9 +399,9 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                   onChange={(e) => setFormData({ ...formData, campus_location: e.target.value })}
                   className="w-full p-3.5 border border-slate-300 rounded-2xl text-base sm:text-sm focus:ring-2 focus:ring-persian min-h-[48px]"
                 >
-                  <option value="Biblioteca Central">Biblioteca Central - UCM Pemba</option>
-                  <option value="Faculdade de Gestão">Faculdade de Gestão de Turismo e Informática (FGTI)</option>
-                  <option value="Cantina Principal">Cantina Principal do Campus</option>
+                  {CAMPUS_LOCATIONS.map((loc) => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
                 </select>
               </div>
 
@@ -400,6 +413,8 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                 <p className="text-xs text-slate-700"><strong>Tipo:</strong> <span className="capitalize font-bold text-persian">{formData.transaction_type}</span></p>
                 <p className="text-xs text-slate-700"><strong>Preço:</strong> <span className="font-extrabold text-slate-900">{formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo' ? '0 MZN (Grátis)' : `${formData.price_mzn} MZN`}</span></p>
                 <p className="text-xs text-slate-700"><strong>Categoria:</strong> {formData.category}</p>
+                <p className="text-xs text-slate-700"><strong>Curso:</strong> {formData.course}</p>
+                <p className="text-xs text-slate-700"><strong>Ponto de Encontro:</strong> {formData.campus_location}</p>
               </div>
             </div>
           )}

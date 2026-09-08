@@ -270,7 +270,7 @@ export function ChatPage() {
             <div>
               <span className="font-black text-slate-900">Encontro Seguro no Campus UCM:</span>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                Recomendamos que a troca ou pagamento seja feito presencialmente na <strong>Biblioteca Central</strong>, <strong>Cantina Principal</strong> ou no <strong>Pátio da FGTI</strong>.
+                Recomendamos que a entrega ou pagamento seja feito presencialmente num dos pontos oficiais: <strong>Em frente a biblioteca</strong>, <strong>Amendoeira</strong> ou <strong>Entrada de estudantes</strong>.
               </p>
             </div>
           </div>

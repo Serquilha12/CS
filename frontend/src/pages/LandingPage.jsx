@@ -281,7 +281,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Negocie e Entregue</h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-                  Converse no chat interno seguro e marque a entrega física na Biblioteca Central ou Cantina do campus.
+                  Converse no chat interno seguro e marque a entrega física num dos pontos do campus: Em frente a biblioteca, Amendoeira ou Entrada de estudantes.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center text-[11px] font-bold text-emerald-600">
@@ -475,7 +475,7 @@ export function LandingPage() {
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
               <button 
-                onClick={() => showToast('As trocas devem ser realizadas exclusivamente em áreas comuns do campus (Biblioteca ou Cantina).', 'info')}
+                onClick={() => showToast('As trocas devem ser realizadas nos pontos de encontro oficiais do campus (Em frente a biblioteca, Amendoeira ou Entrada de estudantes).', 'info')}
                 className="hover:text-slate-900 transition-colors"
               >
                 Segurança no Campus

@@ -40,7 +40,7 @@ const listingSchema = z.object({
   price_mzn: z.number({ invalid_type_error: 'O preço deve ser um valor numérico em Meticais' }).nonnegative('O preço não pode ser negativo'),
   transaction_type: z.enum(TRANSACTION_TYPES).default('venda'),
   course: z.string().min(2, 'Selecione o curso associado'),
-  campus_location: z.string().default('Biblioteca Central'),
+  campus_location: z.string().default('Em frente a biblioteca'),
   images: z.array(z.string().url()).optional()
 });
 
@@ -48,7 +48,7 @@ const reservationSchema = z.object({
   listing_id: z.string().uuid('ID de anúncio inválido'),
   seller_id: z.string().uuid().optional().nullable(),
   agreed_price_mzn: z.coerce.number().nonnegative().optional().nullable(),
-  meeting_point: z.string().optional().nullable().default('Biblioteca Central - UCM Pemba')
+  meeting_point: z.string().optional().nullable().default('Em frente a biblioteca')
 });
 
 module.exports = {

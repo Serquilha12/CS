@@ -17,17 +17,18 @@ export const TRANSACTION_TYPES = [
 ];
 
 export const UCM_COURSES = [
-  'Licenciatura em Tecnologias da Informação',
-  'Licenciatura em Gestão de Empresas',
-  'Licenciatura em Contabilidade e Auditoria',
-  'Licenciatura em Gestão de Turismo',
   'Licenciatura em Direito',
-  'Licenciatura em Enfermagem'
+  'Licenciatura em Contabilidade e Auditoria',
+  'Licenciatura em Economia e Gestão',
+  'Licenciatura em Gestão de Recursos Humanos',
+  'Licenciatura em Tecnologias da Informação',
+  'Licenciatura em Gestão do Meio Ambiente e dos Recursos Naturais',
+  'Licenciatura em Gestão de Turismo e Hotelaria',
+  'Licenciatura em Administração Pública'
 ];
 
 export const CAMPUS_LOCATIONS = [
-  'Biblioteca Central - UCM Pemba',
-  'Faculdade de Gestão de Turismo e Informática',
-  'Cantina Principal do Campus',
-  'Edifício Principal / Receção'
+  'Em frente a biblioteca',
+  'Amendoeira',
+  'Entrada de estudantes'
 ];
