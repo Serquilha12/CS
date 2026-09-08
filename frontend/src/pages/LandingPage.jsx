@@ -1,15 +1,16 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  GraduationCap, KeyRound, Repeat, BookOpen, LogIn, UserPlus, 
+import {
+  GraduationCap, KeyRound, Repeat, BookOpen, LogIn, UserPlus,
   Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck,
-  MessageSquare, Sparkles, ArrowRight, Check, HeartHandshake, CheckCheck, 
+  MessageSquare, Sparkles, ArrowRight, Check, HeartHandshake, CheckCheck,
   Calculator, Search, MapPin, Users, ArrowUpRight, FileText, Sparkle
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { UCM_COURSES } from '../constants';
 import { fetchApi } from '../services/api';
+import { Logo } from '../components/Logo';
 
 export function LandingPage() {
   const { login, register } = useContext(AuthContext);
@@ -120,64 +121,60 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
-      
+
       {/* MESH GRADIENTS SUAVES NOS CANTOS SUPERIORES */}
-      <div 
-        className="absolute -top-32 -left-32 w-72 sm:w-[520px] h-72 sm:h-[520px] bg-gradient-to-br from-sky-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
-        aria-hidden="true" 
+      <div
+        className="absolute -top-32 -left-32 w-72 sm:w-[520px] h-72 sm:h-[520px] bg-gradient-to-br from-sky-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10"
+        aria-hidden="true"
       />
-      <div 
-        className="absolute -top-24 -right-24 w-72 sm:w-[480px] h-72 sm:h-[480px] bg-gradient-to-bl from-teal-200/40 via-emerald-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
-        aria-hidden="true" 
+      <div
+        className="absolute -top-24 -right-24 w-72 sm:w-[480px] h-72 sm:h-[480px] bg-gradient-to-bl from-teal-200/40 via-emerald-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10"
+        aria-hidden="true"
       />
-      <div 
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] sm:w-[600px] h-[500px] sm:h-[600px] bg-gradient-to-tr from-sky-100/30 via-indigo-50/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
-        aria-hidden="true" 
+      <div
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] sm:w-[600px] h-[500px] sm:h-[600px] bg-gradient-to-tr from-sky-100/30 via-indigo-50/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10"
+        aria-hidden="true"
       />
 
       {/* 1. CABEÇALHO FLUTUANTE PREMIUM COM GLASSMORPHISM */}
       <div className="w-full px-3 sm:px-6 lg:px-8 pt-3 sm:pt-6">
         <header className="flex items-center justify-between py-2.5 sm:py-3 px-4 sm:px-6 max-w-5xl mx-auto w-full bg-white/85 backdrop-blur-xl border border-white/80 shadow-[0_4px_25px_-4px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-2xl sm:rounded-3xl sticky top-3 sm:top-4 z-40 transition-all duration-300">
-        
-        {/* Identidade / Marca com Logo Oficial em Gradiente */}
-        <div className="flex items-center space-x-3 min-w-0">
-          <div className="h-9 sm:h-10 px-2 sm:px-2.5 bg-slate-900/5 border border-slate-900/5 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 hover:scale-105 transition-transform duration-200">
-            <img 
-              src="/logo.png" 
-              alt="CampusStore" 
-              className="h-5 sm:h-6 w-auto object-contain" 
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center space-x-1 sm:space-x-1.5">
-              <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">
-                Campus<span className="text-ucm-emerald">Store</span>
-              </span>
-            </div>
-            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-              Economia Circular
-            </p>
-          </div>
-        </div>
 
-        {/* Lado Direito: Link Cadastrar com Estilização Sutil */}
-        <div className="flex items-center shrink-0 ml-2">
-          <button
-            onClick={() => {
-              setIsRegisterModal(true);
-              setIsLoginModal(false);
-            }}
-            className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-          >
-            Cadastrar
-          </button>
-        </div>
-      </header>
+          {/* Identidade / Marca com Logo Oficial em Gradiente */}
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="h-9 sm:h-10 px-2 sm:px-2.5 bg-slate-900/5 border border-slate-900/5 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 hover:scale-105 transition-transform duration-200">
+              <Logo className="h-5 sm:h-6 w-auto" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center space-x-1 sm:space-x-1.5">
+                <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">
+                  Campus<span className="text-ucm-emerald">Store</span>
+                </span>
+              </div>
+              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                Economia Circular
+              </p>
+            </div>
+          </div>
+
+          {/* Lado Direito: Link Cadastrar com Estilização Sutil */}
+          <div className="flex items-center shrink-0 ml-2">
+            <button
+              onClick={() => {
+                setIsRegisterModal(true);
+                setIsLoginModal(false);
+              }}
+              className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+            >
+              Cadastrar
+            </button>
+          </div>
+        </header>
       </div>
 
       {/* 2. HERO SECTION DE ALTO IMPACTO */}
       <main className="max-w-5xl mx-auto text-center my-auto py-8 sm:py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center w-full">
-        
+
         {/* Badge Exclusivo */}
         <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-3.5 sm:px-4 py-1.5 bg-white/80 backdrop-blur-md text-ucm-darkEmerald rounded-full text-[11px] sm:text-xs font-bold border border-emerald-200/80 shadow-xs mb-5 max-w-full">
           <GraduationCap className="w-4 h-4 text-ucm-emerald shrink-0" />
@@ -235,7 +232,7 @@ export function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            
+
             {/* Passo 01 */}
             <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-7 border border-slate-200/60 shadow-bento hover:shadow-xl transition-all duration-300 relative group flex flex-col justify-between">
               <div>
@@ -263,7 +260,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Encontre ou Anuncie</h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1.5 leading-relaxed">
-                  Pesquise manuais, calculadoras, batas e slides, ou fotografe os seus materiais parados para vender ou doar.
+                  Pesquise manuais, calculadoras, Documentos e slides, ou fotografe os seus materiais parados para vender ou doar.
                 </p>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center text-[11px] font-bold text-amber-600">
@@ -301,7 +298,7 @@ export function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            
+
             {/* Cartão 1 (Bento Largo - Chat Integrado & Mockup Flutuante) */}
             <div className="md:col-span-2 bg-white/85 backdrop-blur-md rounded-3xl p-6 sm:p-8 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
               <div>
@@ -466,7 +463,7 @@ export function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-2.5">
               <div className="h-7 w-7 px-1 bg-slate-900/5 rounded-lg flex items-center justify-center">
-                <img src="/logo.png" alt="CS" className="h-4 w-auto object-contain" />
+                <Logo className="h-4 w-auto" />
               </div>
               <span className="font-extrabold text-slate-800 text-sm tracking-tight">CampusStore</span>
               <span className="text-slate-300">|</span>
@@ -474,21 +471,21 @@ export function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
-              <button 
+              <button
                 onClick={() => showToast('As trocas devem ser realizadas nos pontos de encontro oficiais do campus (Em frente a biblioteca, Amendoeira ou Entrada de estudantes).', 'info')}
                 className="hover:text-slate-900 transition-colors"
               >
                 Segurança no Campus
               </button>
               <span>•</span>
-              <button 
+              <button
                 onClick={() => showToast('Apenas e-mails institucionais verificados têm permissão para negociar.', 'info')}
                 className="hover:text-slate-900 transition-colors"
               >
                 Termos de Uso
               </button>
               <span>•</span>
-              <button 
+              <button
                 onClick={() => showToast('Os seus dados e contactos pessoais permanecem privados.', 'info')}
                 className="hover:text-slate-900 transition-colors"
               >
@@ -507,14 +504,14 @@ export function LandingPage() {
 
       {/* MODAL / BOTTOM SHEET DE LOGIN */}
       {isLoginModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsLoginModal(false);
           }}
         >
           <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
-            
+
             {/* Drag Handle / Pill para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
 
@@ -549,13 +546,12 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className={`w-full p-3 sm:p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${
-                      loginData.email.length > 0
+                    className={`w-full p-3 sm:p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${loginData.email.length > 0
                         ? isLoginEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
                           : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
                         : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
-                    }`}
+                      }`}
                   />
                   {loginData.email.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -620,11 +616,10 @@ export function LandingPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !isLoginEmailValid || !loginData.password}
-                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center mt-2 relative cursor-pointer ${
-                  isSubmitting || !isLoginEmailValid || !loginData.password
+                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center mt-2 relative cursor-pointer ${isSubmitting || !isLoginEmailValid || !loginData.password
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed active:scale-100'
                     : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white shadow-ucm-emerald/20 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <span className={`flex items-center justify-center transition-opacity duration-200 ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
                   Entrar na Conta
@@ -659,14 +654,14 @@ export function LandingPage() {
 
       {/* MODAL / BOTTOM SHEET DE REGISTO */}
       {isRegisterModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsRegisterModal(false);
           }}
         >
           <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
-            
+
             {/* Drag Handle para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
 
@@ -723,13 +718,12 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={regData.email}
                     onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
-                      regData.email.length > 0
+                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${regData.email.length > 0
                         ? isRegEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
                           : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
                         : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
-                    }`}
+                      }`}
                   />
                   {regData.email.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -798,11 +792,10 @@ export function LandingPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !isRegEmailValid || regData.password.length < 6 || !regData.full_name.trim()}
-                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative cursor-pointer ${
-                  isSubmitting || !isRegEmailValid || regData.password.length < 6 || !regData.full_name.trim()
+                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative cursor-pointer ${isSubmitting || !isRegEmailValid || regData.password.length < 6 || !regData.full_name.trim()
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed active:scale-100'
                     : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <span className={`flex items-center justify-center transition-opacity duration-200 ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
                   Registar Conta UCM
@@ -837,7 +830,7 @@ export function LandingPage() {
 
       {/* MODAL / BOTTOM SHEET DE RECUPERAÇÃO DE PALAVRA-PASSE */}
       {isForgotModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -847,7 +840,7 @@ export function LandingPage() {
           }}
         >
           <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
-            
+
             {/* Drag Handle para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
 
@@ -928,11 +921,10 @@ export function LandingPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')}
-                      className={`w-1/2 py-3 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative ${
-                        isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
+                      className={`w-1/2 py-3 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative ${isSubmitting || !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
                           ? 'bg-slate-200 text-slate-400 cursor-not-allowed active:scale-100'
                           : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white'
-                      }`}
+                        }`}
                     >
                       <span className={`transition-opacity duration-200 ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
                         Enviar Link
