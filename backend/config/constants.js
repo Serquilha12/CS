@@ -20,5 +20,17 @@ module.exports = {
   UPLOAD_LIMITS: {
     MAX_FILE_SIZE_BYTES: 50 * 1024 * 1024, // 50MB (Sistema assume a compressão automática)
     ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/webp']
+  },
+  ADMIN_EMAILS: (process.env.ADMIN_EMAILS || 'admin.pemba@ucm.ac.mz,admin@ucm.ac.mz')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean),
+  isAdminEmail: (email) => {
+    if (!email) return false;
+    const list = (process.env.ADMIN_EMAILS || 'admin.pemba@ucm.ac.mz,admin@ucm.ac.mz')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(Boolean);
+    return list.includes(email.toLowerCase().trim());
   }
 };

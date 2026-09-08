@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const { supabase, supabaseAdmin } = require('../config/supabase');
+const { isAdminEmail } = require('../config/constants');
 const JWT_SECRET = process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026';
 
 const TEST_ACCOUNTS = {
@@ -41,6 +43,8 @@ const TEST_ACCOUNTS = {
 class AuthService {
   async registerUser({ email, password, full_name, course, campus }) {
     const normalizedEmail = email.toLowerCase().trim();
+    const isAutoAdmin = isAdminEmail(normalizedEmail);
+    const assignedRole = isAutoAdmin ? 'admin' : 'student';
     let userId;
     let authSession = null;
     let authUser = null;
@@ -50,7 +54,7 @@ class AuthService {
         email: normalizedEmail,
         password,
         email_confirm: true,
-        user_metadata: { full_name, course, campus }
+        user_metadata: { full_name, course, campus, role: assignedRole }
       });
 
       if (!adminErr && adminData?.user) {
@@ -66,7 +70,7 @@ class AuthService {
           email: normalizedEmail,
           password,
           options: {
-            data: { full_name, course, campus }
+            data: { full_name, course, campus, role: assignedRole }
           }
         });
 
@@ -90,7 +94,7 @@ class AuthService {
 
     if (!authSession) {
       const token = jwt.sign(
-        { id: userId, email: normalizedEmail, role: 'student', full_name, course },
+        { id: userId, email: normalizedEmail, role: assignedRole, full_name, course },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
@@ -103,7 +107,7 @@ class AuthService {
       full_name,
       course,
       campus: campus || 'Campus de Pemba',
-      role: 'student',
+      role: assignedRole,
       status: 'active'
     };
 
@@ -187,7 +191,7 @@ class AuthService {
       full_name: data.user.user_metadata?.full_name || 'Estudante UCM',
       course: data.user.user_metadata?.course || '',
       campus: data.user.user_metadata?.campus || 'Campus de Pemba',
-      role: 'student',
+      role: isAdminEmail(normalizedEmail) ? 'admin' : 'student',
       status: 'active'
     };
 
@@ -200,6 +204,19 @@ class AuthService {
 
       if (dbProfile) profile = dbProfile;
     } catch (e) {}
+
+    // Auto-promoção de role 'admin' caso o e-mail pertença a ADMIN_EMAILS
+    if (isAdminEmail(normalizedEmail) && profile.role !== 'admin') {
+      profile.role = 'admin';
+      try {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ role: 'admin' })
+          .eq('id', profile.id);
+      } catch (adminPromoteErr) {
+        console.warn('[ADMIN PROMOTE WARNING]:', adminPromoteErr.message);
+      }
+    }
 
     return {
       session: data.session,
@@ -216,7 +233,15 @@ class AuthService {
         .eq('id', userId)
         .single();
 
-      if (!error && data) return data;
+      if (!error && data) {
+        if (isAdminEmail(data.email) && data.role !== 'admin') {
+          data.role = 'admin';
+          try {
+            await supabaseAdmin.from('profiles').update({ role: 'admin' }).eq('id', data.id);
+          } catch (e) {}
+        }
+        return data;
+      }
     } catch (e) {}
 
     return {

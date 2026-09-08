@@ -1,27 +1,61 @@
 const rateLimit = require('express-rate-limit');
 
-// Rate limiting para rotas de autenticação (Login/Registo): 50 tentativas por minuto (ajustado para suportar testes automatizados como TestSprite)
-const authRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 50,
+// Limitador estrito para tentativas de início de sessão (previne ataques de força bruta)
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // Janela de 10 minutos
+  max: 5, // Limite de 5 tentativas por IP
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
-    error: 'Muitas tentativas de autenticação. Por favor, aguarde 1 minuto.'
+    error: 'Demasiadas tentativas de início de sessão incorretas. Por motivos de segurança institucional, o acesso foi temporariamente bloqueado por 10 minutos. Tente novamente mais tarde.'
   },
-  standardHeaders: true,
-  legacyHeaders: false
+  statusCode: 429
 });
 
-// Rate limiting para criação de anúncios: 10 por hora
+// Limitador para recuperação de palavra-passe (evita spam e bombardeio de e-mails)
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // Janela de 1 hora
+  max: 3, // Limite de 3 pedidos por IP por hora
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Atingiu o limite de pedidos de recuperação de palavra-passe. Aguarde 1 hora antes de efetuar um novo pedido.'
+  },
+  statusCode: 429
+});
+
+// Limitador geral moderado para a API de autenticação
+const generalAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // Janela de 15 minutos
+  max: 100, // Limite de 100 requisições por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Limite de requisições excedido. Por favor, tente novamente dentro de instantes.'
+  },
+  statusCode: 429
+});
+
+// Limitador para criação de anúncios (evita flood de publicações duplicadas)
 const listingRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
-  max: 10,
+  max: 20, // Limite de 20 anúncios criados por hora por IP
+  standardHeaders: true,
+  legacyHeaders: false,
   message: {
     success: false,
-    error: 'Limite de criação de anúncios atingido (máximo 10 por hora).'
+    error: 'Limite de criação de anúncios por hora atingido. Aguarde alguns instantes antes de publicar novos materiais.'
   },
-  standardHeaders: true,
-  legacyHeaders: false
+  statusCode: 429
 });
 
-module.exports = { authRateLimiter, listingRateLimiter };
+module.exports = {
+  loginLimiter,
+  passwordResetLimiter,
+  generalAuthLimiter,
+  authRateLimiter: generalAuthLimiter,
+  listingRateLimiter
+};
