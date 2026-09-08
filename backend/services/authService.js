@@ -7,35 +7,33 @@ const TEST_ACCOUNTS = {
   'estudante.teste@ucm.ac.mz': {
     password: 'Senha123!',
     user: {
-      id: 'd9b1a5e2-0000-4000-a000-000000000001',
+      id: 'ad0cb5fb-7766-4ad7-ac12-49bbea754e6f',
       email: 'estudante.teste@ucm.ac.mz',
       user_metadata: { full_name: 'Estudante Teste', course: 'Licenciatura em Tecnologias da Informação' }
     },
     profile: {
-      id: 'd9b1a5e2-0000-4000-a000-000000000001',
+      id: 'ad0cb5fb-7766-4ad7-ac12-49bbea754e6f',
       email: 'estudante.teste@ucm.ac.mz',
       full_name: 'Estudante Teste',
       course: 'Licenciatura em Tecnologias da Informação',
       campus: 'Campus de Pemba',
-      role: 'student',
-      status: 'active'
+      role: 'student'
     }
   },
   'admin.pemba@ucm.ac.mz': {
     password: 'AdminPass123!',
     user: {
-      id: 'd9b1a5e2-0000-4000-a000-000000000002',
+      id: '083a72fd-1766-4ecc-aac0-0bd8588a4d9f',
       email: 'admin.pemba@ucm.ac.mz',
-      user_metadata: { full_name: 'Administrador Pemba', course: 'Licenciatura em Tecnologias da Informação' }
+      user_metadata: { full_name: 'Administrador UCM Pemba', course: 'Licenciatura em Tecnologias da Informação' }
     },
     profile: {
-      id: 'd9b1a5e2-0000-4000-a000-000000000002',
+      id: '083a72fd-1766-4ecc-aac0-0bd8588a4d9f',
       email: 'admin.pemba@ucm.ac.mz',
-      full_name: 'Administrador Pemba',
+      full_name: 'Administrador UCM Pemba',
       course: 'Licenciatura em Tecnologias da Informação',
       campus: 'Campus de Pemba',
-      role: 'admin',
-      status: 'active'
+      role: 'admin'
     }
   }
 };
@@ -107,8 +105,7 @@ class AuthService {
       full_name,
       course,
       campus: campus || 'Campus de Pemba',
-      role: assignedRole,
-      status: 'active'
+      role: assignedRole
     };
 
     try {
@@ -132,9 +129,32 @@ class AuthService {
     // 1. Verificar contas pré-definidas de teste do PRD
     const testAcc = TEST_ACCOUNTS[normalizedEmail];
     if (testAcc && testAcc.password === password) {
+      let realUserId = testAcc.profile.id;
+      try {
+        const { data: dbProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, role')
+          .eq('email', normalizedEmail)
+          .single();
+        if (dbProfile?.id) {
+          realUserId = dbProfile.id;
+        } else {
+          await supabaseAdmin.from('profiles').upsert({
+            id: realUserId,
+            email: normalizedEmail,
+            full_name: testAcc.profile.full_name,
+            course: testAcc.profile.course,
+            campus: testAcc.profile.campus,
+            role: testAcc.profile.role
+          });
+        }
+      } catch (e) {
+        console.warn('[AUTH TEST ACC SYNC]:', e.message);
+      }
+
       const token = jwt.sign(
         {
-          id: testAcc.profile.id,
+          id: realUserId,
           email: testAcc.profile.email,
           role: testAcc.profile.role,
           full_name: testAcc.profile.full_name,
@@ -146,8 +166,8 @@ class AuthService {
 
       return {
         session: { access_token: token },
-        user: testAcc.user,
-        profile: testAcc.profile
+        user: { ...testAcc.user, id: realUserId },
+        profile: { ...testAcc.profile, id: realUserId }
       };
     }
 

@@ -35,26 +35,36 @@ export class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      const errorMessage = this.state.error?.message || 'Erro desconhecido na interface.';
+      const rawMessage = this.state.error?.message || 'Erro desconhecido na interface.';
+      const isDynamicImportError = 
+        rawMessage.includes('dynamically imported module') || 
+        rawMessage.includes('Failed to fetch') ||
+        rawMessage.includes('Importing a module script failed') ||
+        rawMessage.includes('Loading chunk');
+
+      const title = isDynamicImportError ? 'Nova versão detetada' : 'Ocorreu um erro na interface';
+      const description = isDynamicImportError
+        ? 'A plataforma foi recentemente atualizada no servidor. O seu navegador estava a tentar carregar ficheiros de uma versão anterior.'
+        : 'Houve uma falha inesperada durante a renderização da página. Pode tentar recarregar ou limpar os dados locais de sessão.';
 
       return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 text-center">
           <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-100 max-w-lg w-full space-y-5 animate-in fade-in zoom-in duration-200">
             
-            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
-              <AlertTriangle className="w-8 h-8" />
+            <div className={`w-14 h-14 ${isDynamicImportError ? 'bg-emerald-50 text-ucm-emerald' : 'bg-rose-50 text-rose-600'} rounded-2xl flex items-center justify-center mx-auto shadow-sm`}>
+              {isDynamicImportError ? <RefreshCw className="w-8 h-8 animate-spin-slow" /> : <AlertTriangle className="w-8 h-8" />}
             </div>
 
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900 mb-1">Ocorreu um erro na interface</h2>
+              <h2 className="text-xl font-extrabold text-slate-900 mb-1">{title}</h2>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Houve uma falha inesperada durante a renderização da página. Pode tentar recarregar ou limpar os dados locais de sessão.
+                {description}
               </p>
             </div>
 
             {/* Mensagem direta do erro */}
-            <div className="p-3 bg-rose-50/80 border border-rose-200/80 rounded-2xl text-left text-xs text-rose-900 font-medium break-words">
-              <strong>Motivo:</strong> {errorMessage}
+            <div className={`p-3 ${isDynamicImportError ? 'bg-emerald-50/80 border-emerald-200/80 text-emerald-900' : 'bg-rose-50/80 border-rose-200/80 text-rose-900'} border rounded-2xl text-left text-xs font-medium break-words`}>
+              <strong>{isDynamicImportError ? 'Detalhe:' : 'Motivo:'}</strong> {rawMessage}
             </div>
 
             {/* Botões de Ação */}
@@ -71,7 +81,7 @@ export class ErrorBoundary extends React.Component {
                   onClick={() => window.location.reload()}
                   className="flex-1 py-3 px-4 bg-ucm-emerald hover:bg-ucm-darkEmerald text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center cursor-pointer min-h-[44px]"
                 >
-                  Recarregar Página
+                  {isDynamicImportError ? 'Atualizar Aplicação Agora' : 'Recarregar Página'}
                 </button>
               </div>
 

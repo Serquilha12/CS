@@ -11,8 +11,27 @@ import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
-// Code Splitting (React.lazy) para isolar o código do Administrador
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+// Helper para lazy import resiliente a novos deploys (evita erro "Failed to fetch dynamically imported module")
+function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    const pageHasBeenReloaded = sessionStorage.getItem('campusstore_chunk_reload');
+    try {
+      const component = await componentImport();
+      sessionStorage.removeItem('campusstore_chunk_reload');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenReloaded) {
+        sessionStorage.setItem('campusstore_chunk_reload', 'true');
+        window.location.reload();
+        return;
+      }
+      throw error;
+    }
+  });
+}
+
+// Code Splitting (React.lazy resiliente) para isolar o código do Administrador
+const AdminDashboard = lazyWithRetry(() => import('./pages/AdminDashboard'));
 
 // Componente Guarda de Rota Protegida (Exige Login)
 function ProtectedRoute({ children }) {

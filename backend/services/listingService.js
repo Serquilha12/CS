@@ -1,4 +1,5 @@
 const { supabase, supabaseAdmin } = require('../config/supabase');
+const { isAdminEmail } = require('../config/constants');
 const socketManager = require('../websocket/socketManager');
 
 class ListingService {
@@ -7,13 +8,14 @@ class ListingService {
     try {
       const { data: userAuth } = await supabaseAdmin.auth.admin.getUserById(userId);
       if (userAuth?.user) {
+        const userRole = userAuth.user.user_metadata?.role || (isAdminEmail(userAuth.user.email) ? 'admin' : 'student');
         await supabaseAdmin.from('profiles').upsert({
           id: userId,
           email: userAuth.user.email,
           full_name: userAuth.user.user_metadata?.full_name || 'Estudante UCM',
           course: userAuth.user.user_metadata?.course || listingData.course || 'Licenciatura em Tecnologias da Informação',
           campus: userAuth.user.user_metadata?.campus || 'Campus de Pemba',
-          role: 'student'
+          role: userRole
         });
       }
     } catch (e) {

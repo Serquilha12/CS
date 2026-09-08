@@ -61,6 +61,14 @@ CREATE TABLE IF NOT EXISTS public.reservations (
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Garantir colunas essenciais caso a tabela já existisse de uma versão preliminar
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS buyer_confirmed BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS seller_confirmed BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE public.reservations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+
 -- Mensagens do Chat em Tempo Real
 CREATE TABLE IF NOT EXISTS public.chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

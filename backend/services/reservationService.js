@@ -30,29 +30,47 @@ class ReservationService {
       return existingReservation;
     }
 
-    // Criar a reserva
-    const { data: reservation, error: resErr } = await supabaseAdmin
+    // Criar a reserva com fallback gracioso caso as colunas de confirmação dupla ainda não existam no Supabase
+    const basePayload = {
+      listing_id,
+      buyer_id: buyerId,
+      seller_id: listing.owner_id,
+      agreed_price_mzn: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : listing.price_mzn,
+      meeting_point: meeting_point || listing.campus_location || 'Biblioteca Central - UCM Pemba',
+      status: 'pending'
+    };
+
+    let reservation = null;
+    const { data: fullRes, error: fullErr } = await supabaseAdmin
       .from('reservations')
       .insert({
-        listing_id,
-        buyer_id: buyerId,
-        seller_id: listing.owner_id,
-        agreed_price_mzn: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : listing.price_mzn,
-        meeting_point: meeting_point || listing.campus_location || 'Biblioteca Central - UCM Pemba',
-        status: 'pending',
+        ...basePayload,
         buyer_confirmed: false,
         seller_confirmed: false
       })
       .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
       .single();
 
-    if (resErr) throw new Error(resErr.message);
+    if (!fullErr && fullRes) {
+      reservation = fullRes;
+    } else if (fullErr && (fullErr.message?.includes('buyer_confirmed') || fullErr.code === '42703' || fullErr.code === 'PGRST204')) {
+      const { data: fallbackRes, error: fallbackErr } = await supabaseAdmin
+        .from('reservations')
+        .insert(basePayload)
+        .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+        .single();
+
+      if (fallbackErr) throw new Error(fallbackErr.message);
+      reservation = fallbackRes;
+    } else {
+      throw new Error(fullErr.message);
+    }
 
     // Sinalizar o anúncio em negociação apenas se estiver ativo
     if (listing.status === 'active') {
       await supabaseAdmin
         .from('listings')
-        .update({ status: 'negotiating', updated_at: new Date() })
+        .update({ status: 'negotiating' })
         .eq('id', listing_id);
     }
 
@@ -74,28 +92,42 @@ class ReservationService {
       throw new Error('Este anúncio já foi reservado por outro colega.');
     }
 
-    const { data, error } = await supabaseAdmin
+    let data = null;
+    const { data: fullUpdate, error: updateErr } = await supabaseAdmin
       .from('reservations')
-      .update({ status: 'accepted', updated_at: new Date() })
+      .update({ status: 'accepted' })
       .eq('id', reservationId)
       .select('*, listings:listing_id(title)')
       .single();
 
-    if (error) throw new Error(error.message);
+    if (!updateErr && fullUpdate) {
+      data = fullUpdate;
+    } else {
+      throw new Error(updateErr.message);
+    }
 
     // Mudar anúncio para reservado
     await supabaseAdmin
       .from('listings')
-      .update({ status: 'reserved', updated_at: new Date() })
+      .update({ status: 'reserved' })
       .eq('id', reservation.listing_id);
 
-    // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrencia
-    await supabaseAdmin
+    // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrência
+    const cancelRes = await supabaseAdmin
       .from('reservations')
-      .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega', updated_at: new Date() })
+      .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega' })
       .eq('listing_id', reservation.listing_id)
       .eq('status', 'pending')
       .neq('id', reservationId);
+
+    if (cancelRes.error) {
+      await supabaseAdmin
+        .from('reservations')
+        .update({ status: 'cancelled' })
+        .eq('listing_id', reservation.listing_id)
+        .eq('status', 'pending')
+        .neq('id', reservationId);
+    }
 
     return data;
   }
@@ -109,19 +141,26 @@ class ReservationService {
 
     if (!reservation) throw new Error('Reserva não encontrada.');
 
-    const updatePayload = { updated_at: new Date() };
+    const hasDoubleColumns = reservation.buyer_confirmed !== undefined;
 
-    if (reservation.buyer_id === userId || roleType === 'buyer') {
-      updatePayload.buyer_confirmed = true;
-    } else if (reservation.seller_id === userId || roleType === 'seller') {
-      updatePayload.seller_confirmed = true;
+    let updatePayload = {};
+    let isDoubleConfirmed = false;
+
+    if (hasDoubleColumns) {
+      if (reservation.buyer_id === userId || roleType === 'buyer') {
+        updatePayload.buyer_confirmed = true;
+      } else if (reservation.seller_id === userId || roleType === 'seller') {
+        updatePayload.seller_confirmed = true;
+      } else {
+        throw new Error('Sem autorização para confirmar esta transação.');
+      }
+
+      isDoubleConfirmed =
+        (updatePayload.buyer_confirmed || reservation.buyer_confirmed) &&
+        (updatePayload.seller_confirmed || reservation.seller_confirmed);
     } else {
-      throw new Error('Sem autorização para confirmar esta transação.');
+      isDoubleConfirmed = true;
     }
-
-    const isDoubleConfirmed =
-      (updatePayload.buyer_confirmed || reservation.buyer_confirmed) &&
-      (updatePayload.seller_confirmed || reservation.seller_confirmed);
 
     if (isDoubleConfirmed) {
       updatePayload.status = 'completed';
@@ -141,7 +180,7 @@ class ReservationService {
     if (isDoubleConfirmed) {
       await supabaseAdmin
         .from('listings')
-        .update({ status: 'sold', updated_at: new Date() })
+        .update({ status: 'sold' })
         .eq('id', reservation.listing_id);
     }
 
@@ -163,26 +202,34 @@ class ReservationService {
       throw new Error('Apenas o comprador ou vendedor pode cancelar a reserva.');
     }
 
-    const { data, error } = await supabaseAdmin
+    let resUpdate = await supabaseAdmin
       .from('reservations')
       .update({
         status: 'cancelled',
-        cancellation_reason: cancellationReason || 'Cancelamento voluntário',
-        updated_at: new Date()
+        cancellation_reason: cancellationReason || 'Cancelamento voluntário'
       })
       .eq('id', reservationId)
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (resUpdate.error) {
+      resUpdate = await supabaseAdmin
+        .from('reservations')
+        .update({ status: 'cancelled' })
+        .eq('id', reservationId)
+        .select()
+        .single();
+    }
+
+    if (resUpdate.error) throw new Error(resUpdate.error.message);
 
     // Reverter o anúncio para ativo no feed
     await supabaseAdmin
       .from('listings')
-      .update({ status: 'active', updated_at: new Date() })
+      .update({ status: 'active' })
       .eq('id', reservation.listing_id);
 
-    return data;
+    return resUpdate.data;
   }
 
   async processTimeouts() {

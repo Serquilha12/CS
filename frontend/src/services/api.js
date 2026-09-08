@@ -27,15 +27,27 @@ export async function fetchApi(endpoint, options = {}) {
     config.body = JSON.stringify(options.body);
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  if (!config.signal) {
+    config.signal = controller.signal;
+  }
+
   let response;
   try {
     response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   } catch (netErr) {
-    const offlineMsg = 'Falha de comunicação na rede Wi-Fi do campus. Tente novamente.';
+    clearTimeout(timeoutId);
+    const isTimeout = netErr.name === 'AbortError';
+    const offlineMsg = isTimeout 
+      ? 'O pedido ao servidor expirou (timeout). Verifique a sua conexão e tente novamente.'
+      : 'Falha de comunicação na rede Wi-Fi do campus. Tente novamente.';
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cs-network-error', { detail: offlineMsg }));
     }
     throw new Error(offlineMsg);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   let data;

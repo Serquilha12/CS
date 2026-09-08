@@ -203,6 +203,7 @@ export function Marketplace() {
       refresh();
     } catch (e) {
       showToast(e.message || 'Erro ao publicar anúncio. Verifique os dados.', 'error');
+      throw e;
     }
   }
 

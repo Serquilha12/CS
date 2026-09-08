@@ -61,8 +61,10 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
         const bodyData = new FormData();
         bodyData.append('image', compressedFile);
 
+        const token = localStorage.getItem('cs_token');
         const response = await fetch('/api/v1/upload/image', {
           method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
           body: bodyData
         });
         const res = await response.json();
@@ -117,6 +119,11 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     e.preventDefault();
     if (submittingRef.current || isSubmitting) return;
 
+    if (uploading) {
+      showToast('Aguarde a conclusão do envio da fotografia antes de publicar.', 'warning');
+      return;
+    }
+
     const isFree = formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo';
     if (!isFree && (formData.price_mzn === '' || formData.price_mzn === undefined)) {
       showToast('Indique o preço em Meticais (MZN).', 'warning');
@@ -132,6 +139,8 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
         images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80']
       });
     } catch (err) {
+      // Notificação e fallback
+    } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
     }
@@ -452,16 +461,20 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
               className={`flex items-center px-6 py-3.5 font-black rounded-2xl text-xs shadow-lg min-h-[48px] transition-all ${
-                isSubmitting
+                isSubmitting || uploading
                   ? 'bg-slate-700 text-slate-300 cursor-not-allowed'
-                  : 'bg-persian hover:bg-persian-hover text-white shadow-persian/40'
+                  : 'bg-persian hover:bg-persian-hover text-white shadow-persian/40 active:scale-95'
               }`}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin text-carrot" /> A publicar...
+                </>
+              ) : uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin text-carrot" /> A carregar foto...
                 </>
               ) : (
                 <>

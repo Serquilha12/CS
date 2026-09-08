@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { supabase } = require('../config/supabase');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 
 async function authMiddleware(req, res, next) {
   try {
@@ -12,7 +12,7 @@ async function authMiddleware(req, res, next) {
 
     let user = null;
     try {
-      const { data, error } = await supabase.auth.getUser(token);
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
       if (!error && data?.user) {
         user = data.user;
       }
@@ -37,16 +37,34 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
     }
 
-    // Obter o perfil do utilizador na BD (se disponível)
+    // Obter o perfil do utilizador na BD garantindo integridade referencial com supabaseAdmin
     let profile = null;
     try {
-      const { data: dbProfile } = await supabase
+      // 1. Tentar localizar perfil diretamente pelo ID
+      const { data: dbProfile } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
-      if (dbProfile) profile = dbProfile;
-    } catch (e) {}
+        .maybeSingle();
+
+      if (dbProfile) {
+        profile = dbProfile;
+      } else if (user.email) {
+        // 2. Se o ID for legado/antigo mas o e-mail existir na BD, reconcilia para o ID real
+        const { data: profileByEmail } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email.toLowerCase().trim())
+          .maybeSingle();
+
+        if (profileByEmail) {
+          profile = profileByEmail;
+          user.id = profileByEmail.id; // Atualiza o ID em tempo de execução para evitar falha de Foreign Key
+        }
+      }
+    } catch (e) {
+      console.warn('[AUTH MIDDLEWARE PROFILE LOOKUP]:', e.message);
+    }
 
     if (profile?.status === 'suspended') {
       return res.status(403).json({
@@ -56,7 +74,7 @@ async function authMiddleware(req, res, next) {
     }
 
     req.user = {
-      id: user.id,
+      id: profile?.id || user.id,
       email: user.email,
       role: profile?.role || user.role || 'student',
       status: profile?.status || 'active',

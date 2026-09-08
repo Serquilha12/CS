@@ -41,7 +41,7 @@ const listingSchema = z.object({
   transaction_type: z.enum(TRANSACTION_TYPES).default('venda'),
   course: z.string().min(2, 'Selecione o curso associado'),
   campus_location: z.string().default('Em frente a biblioteca'),
-  images: z.array(z.string().url()).optional()
+  images: z.array(z.string().min(1)).optional()
 });
 
 const reservationSchema = z.object({
