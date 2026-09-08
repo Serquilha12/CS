@@ -43,84 +43,65 @@ class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
     const isAutoAdmin = isAdminEmail(normalizedEmail);
     const assignedRole = isAutoAdmin ? 'admin' : 'student';
-    let userId;
-    let authSession = null;
-    let authUser = null;
+    const redirectUrl = process.env.CLIENT_URL || 'https://cs-psi-five.vercel.app';
 
-    try {
-      const { data: adminData, error: adminErr } = await supabaseAdmin.auth.admin.createUser({
-        email: normalizedEmail,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name, course, campus, role: assignedRole }
-      });
-
-      if (!adminErr && adminData?.user) {
-        authUser = adminData.user;
-        userId = adminData.user.id;
-
-        const { data: signInData } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-        if (signInData?.session) {
-          authSession = signInData.session;
-        }
-      } else {
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: { full_name, course, campus, role: assignedRole }
-          }
-        });
-
-        if (signUpErr && !signUpErr.message.includes('User already registered')) {
-          throw new Error(signUpErr.message);
-        }
-
-        if (signUpData?.user) {
-          authUser = signUpData.user;
-          userId = signUpData.user.id;
-          authSession = signUpData.session;
-        }
-      }
-    } catch (apiErr) {
-      console.warn('[AUTH REGISTER SUPABASE NOTICE]:', apiErr.message);
-    }
-
-    if (!userId) {
-      userId = 'usr_' + Math.random().toString(36).substring(2, 11);
-    }
-
-    if (!authSession) {
-      const token = jwt.sign(
-        { id: userId, email: normalizedEmail, role: assignedRole, full_name, course },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-      authSession = { access_token: token };
-    }
-
-    let profile = {
-      id: userId,
+    // 1. Criar utilizador através do fluxo formal do Supabase (envio de link de confirmação)
+    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
       email: normalizedEmail,
-      full_name,
-      course,
-      campus: campus || 'Campus de Pemba',
-      role: assignedRole
-    };
-
-    try {
-      const { data: dbProfile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .upsert(profile)
-        .select()
-        .single();
-
-      if (!profileError && dbProfile) {
-        profile = dbProfile;
+      password,
+      options: {
+        emailRedirectTo: `${redirectUrl}/`,
+        data: { full_name, course, campus, role: assignedRole }
       }
-    } catch (e) {}
+    });
 
-    return { user: authUser || { id: userId, email: normalizedEmail }, profile, session: authSession };
+    if (signUpErr) {
+      if (signUpErr.message?.includes('already registered')) {
+        throw new Error('Este e-mail institucional já se encontra registado na plataforma.');
+      }
+      throw new Error(signUpErr.message);
+    }
+
+    const user = signUpData?.user;
+    if (!user) {
+      throw new Error('Não foi possível iniciar o registo. Verifique os dados e tente novamente.');
+    }
+
+    // 2. Garantir perfil na base de dados
+    try {
+      await supabaseAdmin.from('profiles').upsert({
+        id: user.id,
+        email: normalizedEmail,
+        full_name,
+        course,
+        campus: campus || 'Campus de Pemba',
+        role: assignedRole
+      });
+    } catch (e) {
+      console.warn('[AUTH REGISTER PROFILE]:', e.message);
+    }
+
+    // 3. Se a sessão for nula, o Supabase enviou o e-mail de ativação e exige confirmação prévia
+    if (!signUpData.session) {
+      return {
+        requiresEmailConfirmation: true,
+        user,
+        message: 'Enviámos um link de ativação para o seu e-mail institucional (@ucm.ac.mz). Por favor, aceda à sua caixa de correio da UCM para ativar a sua conta antes de iniciar sessão.'
+      };
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: normalizedEmail, role: assignedRole, full_name, course },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return {
+      requiresEmailConfirmation: false,
+      user,
+      profile: { id: user.id, email: normalizedEmail, full_name, course, campus, role: assignedRole },
+      session: { access_token: token }
+    };
   }
 
   async loginUser({ email, password }) {
@@ -185,20 +166,9 @@ class AuthService {
       console.warn('[AUTH LOGIN NETWORK WARNING]:', netErr.message);
     }
 
-    if (error && (error.message.includes('Email not confirmed') || error.message.includes('invalid_credentials'))) {
-      try {
-        const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
-        const targetUser = usersList?.users?.find(u => u.email.toLowerCase() === normalizedEmail);
-
-        if (targetUser) {
-          await supabaseAdmin.auth.admin.updateUserById(targetUser.id, { email_confirm: true });
-          const retry = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-          if (retry.data?.session) {
-            data = retry.data;
-            error = null;
-          }
-        }
-      } catch (e) {}
+    // 2. Bloqueio estrito se o e-mail institucional não foi confirmado
+    if (error && (error.message?.toLowerCase().includes('email not confirmed') || error.message?.toLowerCase().includes('email_not_confirmed'))) {
+      throw new Error('A sua conta ainda não foi ativada. Por favor, aceda à sua caixa de correio institucional (@ucm.ac.mz) e clique no link de confirmação que lhe enviámos.');
     }
 
     if (error || !data?.user) {
@@ -211,8 +181,7 @@ class AuthService {
       full_name: data.user.user_metadata?.full_name || 'Estudante UCM',
       course: data.user.user_metadata?.course || '',
       campus: data.user.user_metadata?.campus || 'Campus de Pemba',
-      role: isAdminEmail(normalizedEmail) ? 'admin' : 'student',
-      status: 'active'
+      role: isAdminEmail(normalizedEmail) ? 'admin' : 'student'
     };
 
     try {

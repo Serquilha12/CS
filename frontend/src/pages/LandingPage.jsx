@@ -37,6 +37,7 @@ export function LandingPage() {
   });
   const [forgotEmail, setForgotEmail] = useState('');
   const [isForgotSuccess, setIsForgotSuccess] = useState(false);
+  const [emailConfirmationSent, setEmailConfirmationSent] = useState(null);
 
   // Validação em Tempo Real de E-mail UCM com RegEx estrito
   const UCM_EMAIL_REGEX = /^[\w-\.]+@ucm\.ac\.mz$/i;
@@ -82,12 +83,26 @@ export function LandingPage() {
 
     setIsSubmitting(true);
     try {
-      await register({
+      const emailSubmitted = regData.email.toLowerCase().trim();
+      const res = await register({
         ...regData,
-        email: regData.email.toLowerCase().trim()
+        email: emailSubmitted
       });
-      showToast('Conta criada com sucesso! Bem-vindo à CampusStore.', 'success');
-      navigate('/marketplace');
+
+      if (res?.requiresEmailConfirmation) {
+        setEmailConfirmationSent(emailSubmitted);
+        setLoginData(prev => ({ ...prev, email: emailSubmitted }));
+        setIsRegisterModal(false);
+        setIsLoginModal(true);
+        showToast(
+          res.message || 'Link de ativação enviado! Verifique o seu correio institucional (@ucm.ac.mz).',
+          'info',
+          8000
+        );
+      } else {
+        showToast('Conta criada com sucesso! Bem-vindo à CampusStore.', 'success');
+        navigate('/marketplace');
+      }
     } catch (err) {
       showToast(err.message || 'Erro ao criar conta. Tente novamente.', 'error');
     } finally {
@@ -532,6 +547,19 @@ export function LandingPage() {
               <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Entrar na Conta</h2>
               <p className="text-xs text-slate-500 mt-1">Aceda ao marketplace académico seguro da UCM Pemba.</p>
             </div>
+
+            {emailConfirmationSent && (
+              <div className="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-start space-x-2.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-emerald-950">Link de Ativação Enviado!</p>
+                  <p className="mt-0.5 text-emerald-800 leading-relaxed">
+                    Enviámos um link de verificação para <span className="font-semibold underline">{emailConfirmationSent}</span>.
+                    Por favor, aceda à sua caixa de correio da UCM e clique no link antes de iniciar sessão.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleLoginSubmit} className="space-y-3.5 sm:space-y-4">
               <div>

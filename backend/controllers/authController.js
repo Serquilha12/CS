@@ -7,6 +7,18 @@ class AuthController {
       const validatedData = registerSchema.parse(req.body);
       const result = await authService.registerUser(validatedData);
 
+      if (result.requiresEmailConfirmation) {
+        return res.status(201).json({
+          success: true,
+          requiresEmailConfirmation: true,
+          message: result.message,
+          data: {
+            requiresEmailConfirmation: true,
+            user: result.user
+          }
+        });
+      }
+
       if (result.session?.access_token) {
         res.cookie('cs_token', result.session.access_token, {
           httpOnly: true,

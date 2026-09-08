@@ -89,6 +89,13 @@ export function AuthProvider({ children }) {
     });
 
     if (res.success && res.data) {
+      if (res.data.requiresEmailConfirmation || res.requiresEmailConfirmation) {
+        return {
+          requiresEmailConfirmation: true,
+          message: res.message || 'Verifique o seu e-mail institucional (@ucm.ac.mz) para ativar a sua conta.'
+        };
+      }
+
       if (res.data.token) {
         localStorage.setItem('cs_token', res.data.token);
       }
