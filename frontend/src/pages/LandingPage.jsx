@@ -158,14 +158,14 @@ export function LandingPage() {
           </div>
         </div>
 
-        {/* Lado Direito: Botão Cadastrar */}
+        {/* Lado Direito: Link Cadastrar */}
         <div className="flex items-center shrink-0 ml-2">
           <button
             onClick={() => {
               setIsRegisterModal(true);
               setIsLoginModal(false);
             }}
-            className="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
+            className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
           >
             Cadastrar
           </button>
