@@ -134,25 +134,50 @@ export function LandingPage() {
         aria-hidden="true" 
       />
 
-      {/* 1. GLASSMORPHISM & RESPONSIVIDADE: Barra Superior Flutuante */}
-      <header className="flex items-center justify-between py-2.5 sm:py-3.5 px-3.5 sm:px-5 max-w-4xl mx-auto w-full bg-white/75 backdrop-blur-md border border-white/60 shadow-xs rounded-xl sm:rounded-2xl transition-all">
-        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 text-amber-400 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg shadow-sm border border-slate-800 shrink-0">
-            <Repeat className="w-4 h-4 sm:w-5 sm:h-5 text-ucm-emerald" />
+      {/* 1. CABEÇALHO PREMIUM: Flutuante com Glassmorphism, Logo Oficial e Ações Rápidas */}
+      <header className="flex items-center justify-between py-2.5 sm:py-3 px-4 sm:px-6 max-w-4xl mx-auto w-full bg-white/80 backdrop-blur-xl border border-white/80 shadow-[0_4px_25px_-4px_rgba(0,0,0,0.06)] ring-1 ring-slate-900/5 rounded-2xl sm:rounded-3xl sticky top-3 sm:top-4 z-40 transition-all duration-300">
+        
+        {/* Identidade / Marca com Logo Oficial */}
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="h-9 sm:h-10 px-2 sm:px-2.5 bg-slate-900/5 border border-slate-900/5 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 hover:scale-105 transition-transform duration-200">
+            <img 
+              src="/logo.png" 
+              alt="CampusStore" 
+              className="h-5 sm:h-6 w-auto object-contain" 
+            />
           </div>
           <div className="min-w-0">
             <div className="flex items-center space-x-1 sm:space-x-1.5">
-              <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">CampusStore</span>
-              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ucm-emerald shrink-0" />
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">
+                Campus<span className="text-ucm-emerald">Store</span>
+              </span>
             </div>
-            <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">Economia Circular Académica</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              Economia Circular
+            </p>
           </div>
         </div>
-        <div className="flex items-center shrink-0 ml-2">
-          <span className="inline-flex items-center text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 bg-emerald-100/80 text-ucm-darkEmerald rounded-full border border-emerald-200/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-            UCM Pemba
-          </span>
+
+        {/* Lado Direito: Ações Rápidas Elegantes */}
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 ml-2">
+          <button
+            onClick={() => {
+              setIsLoginModal(true);
+              setIsRegisterModal(false);
+            }}
+            className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+          >
+            Entrar
+          </button>
+          <button
+            onClick={() => {
+              setIsRegisterModal(true);
+              setIsLoginModal(false);
+            }}
+            className="hidden xs:inline-flex items-center px-3.5 sm:px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all duration-200 cursor-pointer"
+          >
+            Criar Conta
+          </button>
         </div>
       </header>
 
@@ -162,7 +187,7 @@ export function LandingPage() {
         {/* Badge Exclusivo */}
         <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-1.5 bg-white/80 backdrop-blur-md text-ucm-darkEmerald rounded-full text-[11px] sm:text-xs font-bold border border-emerald-200/80 shadow-xs mb-4 sm:mb-5 max-w-full truncate">
           <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ucm-emerald shrink-0" />
-          <span className="truncate">Exclusivo para a Comunidade Universitária UCM</span>
+          <span className="truncate">Exclusivo para a Comunidade Universitária</span>
         </div>
 
         {/* Título de Alto Impacto */}
@@ -172,7 +197,7 @@ export function LandingPage() {
 
         {/* Subtítulo Equilibrado */}
         <p className="text-slate-600 text-xs sm:text-base leading-relaxed max-w-lg mx-auto mt-3 sm:mt-4 font-normal px-2 sm:px-0">
-          O marketplace interno e seguro para compra, venda, troca e doação de manuais, calculadoras e equipamentos entre estudantes da UCM Pemba.
+          O marketplace interno e seguro para compra, venda, troca e doação de manuais, calculadoras e diversos materiais didaticos entre estudantes.
         </p>
 
         {/* 3. MICRO-INTERAÇÕES: Botões Squishy com active:scale-[0.97] e Tamanho Tátil */}
@@ -269,7 +294,7 @@ export function LandingPage() {
 
               <div className="mt-4 sm:mt-5 p-2.5 sm:p-3 bg-emerald-50/60 border border-emerald-200/60 rounded-xl sm:rounded-2xl flex items-center space-x-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="text-xs font-bold text-emerald-900">Verificação Automática UCM</span>
+                <span className="text-xs font-bold text-emerald-900">Verificação Automática</span>
               </div>
             </div>
 
@@ -300,7 +325,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">Comprar, Vender, Trocar ou Doar</h3>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed max-w-md">
-                  Manuais de Direito, batas de laboratório para Medicina e Enfermagem, calculadoras para Engenharia e apontamentos de Gestão.
+                  Manuais de Direito, calculadoras, computadores, documentos e muito mais.
                 </p>
               </div>
 
@@ -316,11 +341,11 @@ export function LandingPage() {
                 </span>
                 <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
                   <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-emerald-300 shrink-0" />
-                  Batas e Fardas
+                  Partilha de Documentos e Slides
                 </span>
                 <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
                   <HeartHandshake className="w-3.5 h-3.5 mr-1.5 text-rose-300 shrink-0" />
-                  Empréstimos Solidários
+                  Doações e Emprestimos
                 </span>
               </div>
             </div>
