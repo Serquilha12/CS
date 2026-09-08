@@ -100,12 +100,12 @@ export function ProfilePage() {
       <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm relative space-y-4">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-ucm-emerald text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-md shrink-0">
-            {user.full_name?.charAt(0) || 'U'}
+            {user?.full_name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-800">{user.full_name}</h1>
+            <h1 className="text-xl font-bold text-slate-800">{user?.full_name || 'Estudante UCM'}</h1>
             <p className="text-xs text-slate-500 flex items-center">
-              <Mail className="w-3.5 h-3.5 mr-1 text-ucm-emerald" /> {user.email}
+              <Mail className="w-3.5 h-3.5 mr-1 text-ucm-emerald" /> {user?.email}
             </p>
             <span className="inline-block mt-1 px-2.5 py-0.5 bg-emerald-50 text-ucm-darkEmerald text-[11px] font-bold rounded-full border border-emerald-200">
               Estudante Verificado UCM
@@ -169,13 +169,13 @@ export function ProfilePage() {
           <div className="pt-4 border-t border-slate-100 text-xs text-slate-600 space-y-2">
             <p className="flex items-center">
               <GraduationCap className="w-4 h-4 mr-2 text-slate-400" />
-              <strong>Curso:</strong> {user.course || 'Tecnologias da Informação'}
+              <strong>Curso:</strong> {user?.course || 'Tecnologias da Informação'}
             </p>
             <p className="flex items-center">
               <MapPin className="w-4 h-4 mr-2 text-slate-400" />
-              <strong>Campus:</strong> {user.campus || 'Campus de Pemba'}
+              <strong>Campus:</strong> {user?.campus || 'Campus de Pemba'}
             </p>
-            {user.phone_number && (
+            {user?.phone_number && (
               <p className="flex items-center">
                 <Phone className="w-4 h-4 mr-2 text-slate-400" />
                 <strong>Contacto:</strong> {user.phone_number}

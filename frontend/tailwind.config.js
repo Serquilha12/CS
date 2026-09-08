@@ -33,6 +33,12 @@ export default {
           navy: '#1e293b',
           bgLight: '#f8fafc'
         }
+      },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      boxShadow: {
+        'bento': '0 20px 30px -10px rgba(148, 163, 184, 0.2), 0 10px 10px -5px rgba(148, 163, 184, 0.1)',
       }
     },
   },

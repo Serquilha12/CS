@@ -10,19 +10,43 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ success: false, error: 'Acesso negado. Token não fornecido.' });
     }
 
-    // Verificar token via Supabase Auth
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    let user = null;
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (!error && data?.user) {
+        user = data.user;
+      }
+    } catch (e) {}
 
-    if (error || !user) {
+    if (!user) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026');
+        if (decoded) {
+          user = {
+            id: decoded.id,
+            email: decoded.email,
+            role: decoded.role || 'student',
+            course: decoded.course || '',
+            full_name: decoded.full_name || 'Estudante UCM'
+          };
+        }
+      } catch (jwtErr) {}
+    }
+
+    if (!user) {
       return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
     }
 
-    // Obter o perfil do utilizador na BD
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    // Obter o perfil do utilizador na BD (se disponível)
+    let profile = null;
+    try {
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (dbProfile) profile = dbProfile;
+    } catch (e) {}
 
     if (profile?.status === 'suspended') {
       return res.status(403).json({
@@ -34,10 +58,10 @@ async function authMiddleware(req, res, next) {
     req.user = {
       id: user.id,
       email: user.email,
-      role: profile?.role || 'student',
+      role: profile?.role || user.role || 'student',
       status: profile?.status || 'active',
-      course: profile?.course || '',
-      full_name: profile?.full_name || ''
+      course: profile?.course || user.course || '',
+      full_name: profile?.full_name || user.full_name || ''
     };
 
     next();
