@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   GraduationCap, KeyRound, Repeat, BookOpen, LogIn, UserPlus, 
   Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck,
-  MessageSquare, Sparkles, ArrowRight, Check, HeartHandshake
+  MessageSquare, Sparkles, ArrowRight, Check, HeartHandshake, CheckCheck, Calculator
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -118,73 +118,73 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-4 sm:p-6 lg:p-8 relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between p-3 sm:p-6 lg:p-8 relative overflow-x-hidden selection:bg-ucm-emerald selection:text-white">
       
       {/* 1. PROFUNDIDADE & MATERIAIS: Mesh Gradients Suaves nos Cantos Superiores */}
       <div 
-        className="absolute -top-32 -left-32 w-80 sm:w-[520px] h-80 sm:h-[520px] bg-gradient-to-br from-sky-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
+        className="absolute -top-32 -left-32 w-72 sm:w-[520px] h-72 sm:h-[520px] bg-gradient-to-br from-sky-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
         aria-hidden="true" 
       />
       <div 
-        className="absolute -top-24 -right-24 w-80 sm:w-[480px] h-80 sm:h-[480px] bg-gradient-to-bl from-teal-200/40 via-emerald-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
+        className="absolute -top-24 -right-24 w-72 sm:w-[480px] h-72 sm:h-[480px] bg-gradient-to-bl from-teal-200/40 via-emerald-200/30 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
         aria-hidden="true" 
       />
       <div 
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-sky-100/30 via-indigo-50/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] sm:w-[600px] h-[500px] sm:h-[600px] bg-gradient-to-tr from-sky-100/30 via-indigo-50/20 to-transparent rounded-full blur-3xl pointer-events-none -z-10" 
         aria-hidden="true" 
       />
 
-      {/* 1. GLASSMORPHISM: Barra Superior Flutuante */}
-      <header className="flex items-center justify-between py-3.5 px-5 max-w-4xl mx-auto w-full bg-white/70 backdrop-blur-md border border-white/60 shadow-xs rounded-2xl transition-all">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-slate-900 text-amber-400 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm border border-slate-800">
-            <Repeat className="w-5 h-5 text-ucm-emerald" />
+      {/* 1. GLASSMORPHISM & RESPONSIVIDADE: Barra Superior Flutuante */}
+      <header className="flex items-center justify-between py-2.5 sm:py-3.5 px-3.5 sm:px-5 max-w-4xl mx-auto w-full bg-white/75 backdrop-blur-md border border-white/60 shadow-xs rounded-xl sm:rounded-2xl transition-all">
+        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 text-amber-400 rounded-xl flex items-center justify-center font-bold text-base sm:text-lg shadow-sm border border-slate-800 shrink-0">
+            <Repeat className="w-4 h-4 sm:w-5 sm:h-5 text-ucm-emerald" />
           </div>
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-lg text-slate-900 tracking-tight">CampusStore</span>
-              <BookOpen className="w-4 h-4 text-ucm-emerald" />
+          <div className="min-w-0">
+            <div className="flex items-center space-x-1 sm:space-x-1.5">
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight truncate">CampusStore</span>
+              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ucm-emerald shrink-0" />
             </div>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Economia Circular Académica</p>
+            <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">Economia Circular Académica</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="inline-flex items-center text-xs font-bold px-3 py-1 bg-emerald-100/80 text-ucm-darkEmerald rounded-full border border-emerald-200/80">
+        <div className="flex items-center shrink-0 ml-2">
+          <span className="inline-flex items-center text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 bg-emerald-100/80 text-ucm-darkEmerald rounded-full border border-emerald-200/80">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
             UCM Pemba
           </span>
         </div>
       </header>
 
-      {/* 2. TIPOGRAFIA DE ALTO CALIBRE: Hero Section com tracking-tight e leading-snug */}
-      <main className="max-w-4xl mx-auto text-center my-auto py-8 sm:py-12 px-2 flex flex-col items-center">
+      {/* 2. TIPOGRAFIA DE ALTO CALIBRE: Hero Section Responsiva */}
+      <main className="max-w-4xl mx-auto text-center my-auto py-6 sm:py-12 px-1 sm:px-2 flex flex-col items-center w-full">
         
         {/* Badge Exclusivo */}
-        <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-white/80 backdrop-blur-md text-ucm-darkEmerald rounded-full text-xs font-bold border border-emerald-200/80 shadow-xs mb-5">
-          <GraduationCap className="w-4 h-4 text-ucm-emerald" />
-          <span>Exclusivo para a Comunidade Universitária UCM</span>
+        <div className="inline-flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-1.5 bg-white/80 backdrop-blur-md text-ucm-darkEmerald rounded-full text-[11px] sm:text-xs font-bold border border-emerald-200/80 shadow-xs mb-4 sm:mb-5 max-w-full truncate">
+          <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ucm-emerald shrink-0" />
+          <span className="truncate">Exclusivo para a Comunidade Universitária UCM</span>
         </div>
 
         {/* Título de Alto Impacto */}
-        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-snug sm:leading-tight max-w-2xl mx-auto">
+        <h1 className="text-2xl xs:text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-snug sm:leading-tight max-w-2xl mx-auto">
           Poupe no seu <span className="bg-gradient-to-r from-ucm-emerald via-blue-600 to-indigo-600 bg-clip-text text-transparent">material académico</span>
         </h1>
 
         {/* Subtítulo Equilibrado */}
-        <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-lg mx-auto mt-4 font-normal">
+        <p className="text-slate-600 text-xs sm:text-base leading-relaxed max-w-lg mx-auto mt-3 sm:mt-4 font-normal px-2 sm:px-0">
           O marketplace interno e seguro para compra, venda, troca e doação de manuais, calculadoras e equipamentos entre estudantes da UCM Pemba.
         </p>
 
-        {/* 3. MICRO-INTERAÇÕES: Botões Squishy com active:scale-[0.97] */}
-        <div className="pt-6 w-full max-w-md flex flex-col sm:flex-row items-center justify-center gap-3">
+        {/* 3. MICRO-INTERAÇÕES: Botões Squishy com active:scale-[0.97] e Tamanho Tátil */}
+        <div className="pt-5 sm:pt-6 w-full max-w-md flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3">
           <button
             onClick={() => {
               setIsRegisterModal(true);
               setIsLoginModal(false);
             }}
-            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-6 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white font-bold rounded-2xl shadow-lg shadow-slate-900/15 transition-all duration-200 text-sm sm:text-base flex items-center justify-center cursor-pointer group"
+            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-5 sm:px-6 bg-slate-900 hover:bg-slate-800 active:scale-[0.97] text-white font-bold rounded-2xl shadow-lg shadow-slate-900/15 transition-all duration-200 text-sm sm:text-base flex items-center justify-center cursor-pointer group"
           >
-            <UserPlus className="w-5 h-5 mr-2 text-ucm-emerald group-hover:scale-110 transition-transform" />
+            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-ucm-emerald group-hover:scale-110 transition-transform" />
             <span>Criar Conta UCM</span>
           </button>
 
@@ -193,47 +193,47 @@ export function LandingPage() {
               setIsLoginModal(true);
               setIsRegisterModal(false);
             }}
-            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-6 bg-white/90 backdrop-blur-sm border-2 border-slate-200 hover:border-ucm-emerald active:scale-[0.97] text-slate-700 hover:text-ucm-darkEmerald font-bold rounded-2xl transition-all duration-200 text-sm sm:text-base flex items-center justify-center shadow-xs cursor-pointer"
+            className="w-full sm:w-auto flex-1 min-h-[48px] py-3.5 px-5 sm:px-6 bg-white/90 backdrop-blur-sm border-2 border-slate-200 hover:border-ucm-emerald active:scale-[0.97] text-slate-700 hover:text-ucm-darkEmerald font-bold rounded-2xl transition-all duration-200 text-sm sm:text-base flex items-center justify-center shadow-xs cursor-pointer"
           >
-            <LogIn className="w-5 h-5 mr-2 text-slate-500" />
+            <LogIn className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-slate-500" />
             <span>Já tenho Conta</span>
           </button>
         </div>
 
-        {/* 4. LAYOUT BENTO BOX: Grelha Assimétrica com Efeito de Vidro & Sombras Difusas */}
-        <section className="w-full mt-14 text-left">
-          <div className="text-center mb-6">
-            <span className="text-xs font-bold text-ucm-emerald tracking-wider uppercase">Vantagens Exclusivas</span>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Concebido para a realidade do Campus</h2>
+        {/* 4. LAYOUT BENTO BOX: Totalmente Responsivo & Sem Emojis */}
+        <section className="w-full mt-10 sm:mt-14 text-left">
+          <div className="text-center mb-5 sm:mb-6">
+            <span className="text-[11px] sm:text-xs font-bold text-ucm-emerald tracking-wider uppercase">Vantagens Exclusivas</span>
+            <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Concebido para a realidade do Campus</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
             
             {/* Cartão 1 (Bento Largo - Chat Integrado & Mockup Flutuante) */}
-            <div className="md:col-span-2 bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+            <div className="md:col-span-2 bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl p-5 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 bg-blue-50 text-ucm-emerald rounded-2xl flex items-center justify-center mb-3">
-                    <MessageSquare className="w-5 h-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 text-ucm-emerald rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3">
+                    <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="text-[11px] font-bold px-2.5 py-1 bg-blue-50 text-ucm-emerald rounded-full border border-blue-100">
+                  <span className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 bg-blue-50 text-ucm-emerald rounded-full border border-blue-100">
                     Negociação Instantânea
                   </span>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Chat Interno em Tempo Real</h3>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Chat Interno em Tempo Real</h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-md leading-relaxed">
                   Converse diretamente com colegas de turma, combine a entrega física no campus e negocie com privacidade sem expor o seu contacto pessoal.
                 </p>
               </div>
 
-              {/* Mockup Falso com 2 Bolhas Flutuantes */}
-              <div className="mt-5 pt-3 border-t border-slate-100/80 space-y-2.5">
+              {/* Mockup com 2 Bolhas Flutuantes (Sem Emojis) */}
+              <div className="mt-4 sm:mt-5 pt-3 border-t border-slate-100/80 space-y-2.5">
                 {/* Bolha Comprador */}
                 <div className="flex items-end space-x-2 animate-float-slow">
                   <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 text-[10px] font-extrabold flex items-center justify-center shrink-0">
                     AJ
                   </div>
-                  <div className="bg-slate-100/90 text-slate-800 text-xs px-3.5 py-2 rounded-2xl rounded-bl-xs max-w-[80%] sm:max-w-xs shadow-xs">
+                  <div className="bg-slate-100/90 text-slate-800 text-xs px-3 sm:px-3.5 py-2 rounded-2xl rounded-bl-xs max-w-[85%] sm:max-w-xs shadow-xs break-words">
                     <p className="text-[10px] font-semibold text-slate-500 mb-0.5">Colega de Direito</p>
                     Olá! Ainda tens o livro de Direito Constitucional da 2ª Edição?
                   </div>
@@ -241,9 +241,12 @@ export function LandingPage() {
 
                 {/* Bolha Vendedor */}
                 <div className="flex items-end justify-end space-x-2 animate-float-slower">
-                  <div className="bg-ucm-emerald text-white text-xs px-3.5 py-2 rounded-2xl rounded-br-xs max-w-[80%] sm:max-w-xs shadow-md shadow-ucm-emerald/20">
-                    Sim! Posso entregar amanhã às 10h em frente à Biblioteca 📚
-                    <span className="block text-[9px] text-blue-200 text-right mt-0.5">10:15 ✓✓</span>
+                  <div className="bg-ucm-emerald text-white text-xs px-3 sm:px-3.5 py-2 rounded-2xl rounded-br-xs max-w-[85%] sm:max-w-xs shadow-md shadow-ucm-emerald/20 break-words">
+                    Sim! Posso entregar amanhã às 10h em frente à Biblioteca Central.
+                    <span className="inline-flex items-center justify-end w-full text-[9px] text-blue-200 text-right mt-0.5 space-x-0.5">
+                      <span>10:15</span>
+                      <CheckCheck className="w-3 h-3 text-blue-200 inline ml-1 shrink-0" />
+                    </span>
                   </div>
                   <div className="w-7 h-7 rounded-full bg-ucm-darkEmerald text-white text-[10px] font-extrabold flex items-center justify-center shrink-0">
                     Tu
@@ -253,66 +256,71 @@ export function LandingPage() {
             </div>
 
             {/* Cartão 2 (Bento Quadrado - Segurança Institucional) */}
-            <div className="md:col-span-1 bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
+            <div className="md:col-span-1 bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl p-5 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
               <div>
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-3">
-                  <ShieldCheck className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3">
+                  <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">100% Universitário</h3>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">100% Universitário</h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
                   Acesso estritamente restrito a estudantes e docentes com e-mail institucional <span className="font-semibold text-slate-700">@ucm.ac.mz</span>. Zero perfis falsos.
                 </p>
               </div>
 
-              <div className="mt-5 p-3 bg-emerald-50/60 border border-emerald-200/60 rounded-2xl flex items-center space-x-2.5">
+              <div className="mt-4 sm:mt-5 p-2.5 sm:p-3 bg-emerald-50/60 border border-emerald-200/60 rounded-xl sm:rounded-2xl flex items-center space-x-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="text-xs font-bold text-emerald-900">Verificação Automática UCM</span>
               </div>
             </div>
 
             {/* Cartão 3 (Bento Quadrado - Economia Circular) */}
-            <div className="md:col-span-1 bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
+            <div className="md:col-span-1 bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl p-5 sm:p-7 ring-1 ring-slate-900/5 shadow-bento hover:shadow-2xl transition-all duration-300 flex flex-col justify-between">
               <div>
-                <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-3">
-                  <Repeat className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-50 text-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3">
+                  <Repeat className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Economia Circular</h3>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Economia Circular</h3>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
                   Passe materiais de semestre a semestre, recupere parte do valor investido e apoie caloiros a preços justos.
                 </p>
               </div>
 
-              <div className="mt-5 p-3 bg-slate-50 border border-slate-100 rounded-2xl flex items-baseline justify-between">
+              <div className="mt-4 sm:mt-5 p-2.5 sm:p-3 bg-slate-50 border border-slate-100 rounded-xl sm:rounded-2xl flex items-baseline justify-between">
                 <span className="text-xs font-medium text-slate-500">Poupança Média</span>
-                <span className="text-base font-extrabold text-slate-900">Até 40%</span>
+                <span className="text-sm sm:text-base font-extrabold text-slate-900">Até 40%</span>
               </div>
             </div>
 
-            {/* Cartão 4 (Bento Largo - Categorias & Modalidades) */}
-            <div className="md:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-7 ring-1 ring-slate-900/5 shadow-bento flex flex-col justify-between relative overflow-hidden">
+            {/* Cartão 4 (Bento Largo - Categorias & Modalidades com Ícones Vetoriais) */}
+            <div className="md:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 ring-1 ring-slate-900/5 shadow-bento flex flex-col justify-between relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-center space-x-2 mb-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Multi-Modalidades</span>
+                  <span className="text-[10px] sm:text-[11px] font-bold text-amber-400 uppercase tracking-wider">Multi-Modalidades</span>
                 </div>
-                <h3 className="text-lg font-extrabold text-white tracking-tight">Comprar, Vender, Trocar ou Doar</h3>
+                <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">Comprar, Vender, Trocar ou Doar</h3>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed max-w-md">
                   Manuais de Direito, batas de laboratório para Medicina e Enfermagem, calculadoras para Engenharia e apontamentos de Gestão.
                 </p>
               </div>
 
-              <div className="relative z-10 mt-5 flex flex-wrap gap-2">
-                <span className="px-3 py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-xs font-medium border border-white/10 transition-colors">
-                  📚 Manuais & Livros
+              {/* Tags Profissionais com Ícones SVG (Sem Emojis) */}
+              <div className="relative z-10 mt-4 sm:mt-5 flex flex-wrap gap-1.5 sm:gap-2">
+                <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
+                  <BookOpen className="w-3.5 h-3.5 mr-1.5 text-blue-300 shrink-0" />
+                  Manuais e Livros
                 </span>
-                <span className="px-3 py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-xs font-medium border border-white/10 transition-colors">
-                  🧮 Calculadoras Científicas
+                <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
+                  <Calculator className="w-3.5 h-3.5 mr-1.5 text-amber-300 shrink-0" />
+                  Calculadoras Científicas
                 </span>
-                <span className="px-3 py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-xs font-medium border border-white/10 transition-colors">
-                  🥼 Batas & Fardas
+                <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
+                  <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-emerald-300 shrink-0" />
+                  Batas e Fardas
                 </span>
-                <span className="px-3 py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-xs font-medium border border-white/10 transition-colors">
-                  🤝 Empréstimos Solidários
+                <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl text-[11px] sm:text-xs font-medium border border-white/10 transition-colors">
+                  <HeartHandshake className="w-3.5 h-3.5 mr-1.5 text-rose-300 shrink-0" />
+                  Empréstimos Solidários
                 </span>
               </div>
             </div>
@@ -323,7 +331,7 @@ export function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="text-center py-6 border-t border-slate-200/80 text-xs text-slate-500 max-w-4xl mx-auto w-full mt-10">
+      <footer className="text-center py-4 sm:py-6 border-t border-slate-200/80 text-xs text-slate-500 max-w-4xl mx-auto w-full mt-8 sm:mt-10">
         <p>© 2026 CampusStore — Universidade Católica de Moçambique (Pemba). Todos os direitos reservados.</p>
       </footer>
 
@@ -337,7 +345,7 @@ export function LandingPage() {
             if (e.target === e.currentTarget) setIsLoginModal(false);
           }}
         >
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[32px] sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-white/50 relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
             
             {/* Drag Handle / Pill para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
@@ -345,22 +353,22 @@ export function LandingPage() {
             {/* Botão Fechar Acessível */}
             <button
               onClick={() => setIsLoginModal(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+              className="absolute top-4 sm:top-5 right-4 sm:right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
               aria-label="Fechar"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Cabeçalho */}
-            <div className="mb-6">
-              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3 text-ucm-emerald">
-                <LogIn className="w-6 h-6" />
+            <div className="mb-5 sm:mb-6">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2.5 text-ucm-emerald">
+                <LogIn className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Entrar na Conta</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Entrar na Conta</h2>
               <p className="text-xs text-slate-500 mt-1">Aceda ao marketplace académico seguro da UCM Pemba.</p>
             </div>
 
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5 sm:space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   E-mail Institucional (@ucm.ac.mz)
@@ -373,7 +381,7 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className={`w-full p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${
+                    className={`w-full p-3 sm:p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${
                       loginData.email.length > 0
                         ? isLoginEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -427,7 +435,7 @@ export function LandingPage() {
                     placeholder="••••••••"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="w-full p-3.5 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
+                    className="w-full p-3 sm:p-3.5 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
                   />
                   <button
                     type="button"
@@ -489,28 +497,28 @@ export function LandingPage() {
             if (e.target === e.currentTarget) setIsRegisterModal(false);
           }}
         >
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[32px] sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-white/50 relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
             
             {/* Drag Handle para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
 
             <button
               onClick={() => setIsRegisterModal(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+              className="absolute top-4 sm:top-5 right-4 sm:right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
               aria-label="Fechar"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="mb-5">
-              <div className="w-12 h-12 bg-slate-900 text-ucm-emerald rounded-2xl flex items-center justify-center mb-3">
-                <UserPlus className="w-6 h-6" />
+            <div className="mb-4 sm:mb-5">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 bg-slate-900 text-ucm-emerald rounded-2xl flex items-center justify-center mb-2.5">
+                <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Criar Conta UCM</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Criar Conta UCM</h2>
               <p className="text-xs text-slate-500 mt-1">Exclusivo para estudantes e docentes com e-mail institucional.</p>
             </div>
 
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+            <form onSubmit={handleRegisterSubmit} className="space-y-3 sm:space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
                 <input
@@ -613,7 +621,7 @@ export function LandingPage() {
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs text-slate-600 flex items-start space-x-2">
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl sm:rounded-2xl text-xs text-slate-600 flex items-start space-x-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span>O seu e-mail institucional é verificado para garantir transações 100% seguras no campus de Pemba.</span>
               </div>
@@ -670,7 +678,7 @@ export function LandingPage() {
             }
           }}
         >
-          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[32px] sm:rounded-3xl p-6 sm:p-7 shadow-2xl border border-white/50 relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
             
             {/* Drag Handle para Mobile */}
             <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
@@ -680,7 +688,7 @@ export function LandingPage() {
                 setIsForgotModal(false);
                 setIsForgotSuccess(false);
               }}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+              className="absolute top-4 sm:top-5 right-4 sm:right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
               aria-label="Fechar"
             >
               <X className="w-5 h-5" />
@@ -688,16 +696,16 @@ export function LandingPage() {
 
             {isForgotSuccess ? (
               <div className="text-center py-3">
-                <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
-                  <CheckCircle2 className="w-8 h-8" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                  <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
                 </div>
-                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Instruções Enviadas!</h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Instruções Enviadas!</h2>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   Enviámos um link seguro de reposição para{' '}
                   <span className="font-bold text-slate-900">{forgotEmail}</span>.
                 </p>
 
-                <div className="my-4 p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl text-left text-xs text-amber-900 leading-relaxed flex items-start space-x-2">
+                <div className="my-4 p-3 sm:p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl sm:rounded-2xl text-left text-xs text-amber-900 leading-relaxed flex items-start space-x-2">
                   <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span><strong>Dica de Segurança UCM:</strong> Verifique a sua caixa de correio institucional. Caso não apareça de imediato, consulte a pasta de <strong>Spam / Lixo Eletrónico</strong>.</span>
                 </div>
@@ -716,15 +724,15 @@ export function LandingPage() {
               </div>
             ) : (
               <>
-                <div className="mb-5">
-                  <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-3">
-                    <KeyRound className="w-6 h-6 text-amber-600" />
+                <div className="mb-4 sm:mb-5">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-2.5">
+                    <KeyRound className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
                   </div>
-                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Recuperar Palavra-passe</h2>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">Recuperar Palavra-passe</h2>
                   <p className="text-xs text-slate-500 mt-1">Insira o e-mail institucional registado para receber o link de reposição.</p>
                 </div>
 
-                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <form onSubmit={handleForgotSubmit} className="space-y-3.5 sm:space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">E-mail @ucm.ac.mz</label>
                     <input
@@ -734,11 +742,11 @@ export function LandingPage() {
                       placeholder="estudante@ucm.ac.mz"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full p-3.5 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
+                      className="w-full p-3 sm:p-3.5 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
                     />
                   </div>
 
-                  <div className="flex space-x-3 pt-2">
+                  <div className="flex space-x-2.5 sm:space-x-3 pt-2">
                     <button
                       type="button"
                       onClick={() => {

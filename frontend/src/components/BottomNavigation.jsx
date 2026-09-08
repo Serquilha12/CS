@@ -13,7 +13,7 @@ export function BottomNavigation() {
   if (location.pathname === '/anunciar') return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 px-4 py-2 flex justify-around items-center shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-lg border-t border-slate-200/80 z-50 px-2 sm:px-4 py-1 sm:py-2 pb-[calc(0.4rem+env(safe-area-inset-bottom))] flex justify-around items-center shadow-lg transition-all">
       <NavLink
         to="/marketplace"
         className={({ isActive }) =>
