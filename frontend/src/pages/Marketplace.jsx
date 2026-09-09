@@ -12,6 +12,7 @@ import { MarketplaceSkeletonGrid } from '../components/SkeletonLoaders';
 import { EmptyState } from '../components/EmptyState';
 import { CreateListingWizard } from '../components/CreateListingWizard';
 import { MaterialCard } from '../components/MaterialCard';
+import { Logo } from '../components/Logo';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -240,9 +241,16 @@ export function Marketplace() {
 
         {/* SIDEBAR DE FILTROS (visível apenas a partir de lg) */}
         <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-4 self-start pr-6 space-y-6 pt-6 pl-4">
-          <div>
-            <h2 className="text-base font-black text-slate-900 mb-1">Mercado UCM</h2>
-            <p className="text-xs text-slate-400">Filtros de pesquisa</p>
+          <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+            <div className="h-10 w-10 bg-blue-900/5 border border-blue-900/10 rounded-2xl flex items-center justify-center shrink-0 p-1.5 shadow-xs">
+              <Logo className="h-6 w-auto" />
+            </div>
+            <div>
+              <h2 className="text-base font-black text-slate-900 leading-tight">
+                Campus<span className="text-ucm-emerald">Store</span>
+              </h2>
+              <p className="text-[11px] text-slate-400 font-medium">Mercado Académico</p>
+            </div>
           </div>
 
           {/* Sidebar: Categorias */}
@@ -371,13 +379,22 @@ export function Marketplace() {
           {/* ─── CABEÇALHO FIXO COM GLASSMORPHISM (TOP BAR NATIVA) ─── */}
           <div className="sticky top-0 z-40 -mx-2 sm:-mx-4 px-2 sm:px-4 pt-2.5 pb-2 bg-white/80 backdrop-blur-md border-b border-slate-200/50 space-y-2.5 transition-all shadow-xs">
             
-            {/* Linha Superior: Título & Ações */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">Mercado UCM</h1>
-                <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Campus Pemba · Economia Circular Académica</p>
+            {/* Linha Superior: Logótipo Oficial, Identidade & Ações */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="h-9 w-9 bg-blue-900/5 border border-blue-900/10 rounded-xl flex items-center justify-center shrink-0 p-1 shadow-xs hover:scale-105 transition-transform duration-200">
+                  <Logo className="h-5 w-auto" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight tracking-tight truncate">
+                    Campus<span className="text-ucm-emerald">Store</span>
+                  </h1>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">
+                    Mercado UCM · Pemba
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <button
                   onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
                   className="p-2 bg-white/80 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-full shadow-xs transition-transform active:scale-90 duration-150 min-h-[38px] min-w-[38px] flex items-center justify-center"
