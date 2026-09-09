@@ -8,6 +8,18 @@
   }
 }
 
+/* Utilitários para ocultar scrollbars nativas com rolagem tátil fluida estilo iOS/Android */
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none,
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Animações e transições personalizadas */
 .toast-enter {
   animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);

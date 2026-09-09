@@ -15,14 +15,22 @@ import { MaterialCard } from '../components/MaterialCard';
 import { CATEGORIES, TRANSACTION_TYPES } from '../constants';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-function renderCategoryIcon(cat) {
+const SEARCH_PLACEHOLDERS = [
+  'Procurar manuais, batas ou calculadoras...',
+  'Pesquisar livros de Anatomia, Direito, TI...',
+  'Encontrar materiais no Campus de Pemba...',
+  'Doações, trocas e sebentas académicas...'
+];
+
+function renderCategoryIcon(cat, isSelected = false) {
+  const iconClass = `w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-slate-500'}`;
   switch (cat) {
-    case 'Manuais e Livros': return <BookOpen className="w-4 h-4 text-emerald-600 shrink-0" />;
-    case 'Calculadoras': return <Calculator className="w-4 h-4 text-sky-600 shrink-0" />;
-    case 'Informática & Gadgets': return <Laptop className="w-4 h-4 text-indigo-600 shrink-0" />;
-    case 'Material de Desenho': return <Pencil className="w-4 h-4 text-amber-600 shrink-0" />;
-    case 'Laboratório': return <FlaskConical className="w-4 h-4 text-purple-600 shrink-0" />;
-    default: return <Package className="w-4 h-4 text-slate-500 shrink-0" />;
+    case 'Manuais e Livros': return <BookOpen className={iconClass} />;
+    case 'Calculadoras': return <Calculator className={iconClass} />;
+    case 'Informática & Gadgets': return <Laptop className={iconClass} />;
+    case 'Material de Desenho': return <Pencil className={iconClass} />;
+    case 'Laboratório': return <FlaskConical className={iconClass} />;
+    default: return <Package className={iconClass} />;
   }
 }
 
@@ -48,8 +56,17 @@ export function Marketplace() {
   const [selectedActionType, setSelectedActionType] = useState('');
   const [selectedPriceRange, setSelectedPriceRange] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
+
+  // Efeito de rotação de micro-cópia inteligente da barra de pesquisa
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % SEARCH_PLACEHOLDERS.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
 
   // Estado temporário dentro do sheet para preview do contador antes de aplicar
   const [draftActionType, setDraftActionType] = useState('');
@@ -351,111 +368,106 @@ export function Marketplace() {
         {/* ─── COLUNA PRINCIPAL ─── */}
         <div className="flex-1 min-w-0 p-2 sm:p-4 space-y-3">
 
-          {/* Header Mobile/Tablet */}
-          <div className="flex items-center justify-between pt-1 lg:hidden">
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">Mercado UCM</h1>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Pemba · Compra, Troca, Doação, Empréstimo</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
-                className="p-2 bg-white border border-slate-200 text-slate-600 hover:text-persian rounded-2xl shadow-xs transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
-                title="Notificações"
-              >
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-              <button
-                onClick={() => setIsWizardOpen(true)}
-                className="hidden sm:flex px-4 py-2.5 bg-persian hover:bg-persian-hover text-white font-bold rounded-2xl shadow-md text-xs items-center min-h-[44px]"
-              >
-                <Plus className="w-4 h-4 mr-1.5 text-carrot" /> Anunciar
-              </button>
-            </div>
-          </div>
-
-          {/* Header Desktop (dentro da coluna) */}
-          <div className="hidden lg:flex items-center justify-between pt-2">
-            <div>
-              <h1 className="text-2xl font-black text-slate-900">Mercado Académico UCM</h1>
-              <p className="text-xs text-slate-400">Comunidade Pemba · Compra, Troca, Doação e Empréstimo</p>
-            </div>
-            <button
-              onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
-              className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-persian rounded-2xl shadow-xs transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-            >
-              <Bell className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* ─── BARRA DE PESQUISA + BOTÃO FILTRAR ─── */}
-          <div className="flex space-x-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Pesquisar manuais, calculadoras, batas..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-persian focus:border-persian focus:outline-none text-xs sm:text-sm min-h-[44px] sm:min-h-[46px] transition-all"
-              />
-              {searchTerm && (
+          {/* ─── CABEÇALHO FIXO COM GLASSMORPHISM (TOP BAR NATIVA) ─── */}
+          <div className="sticky top-0 z-40 -mx-2 sm:-mx-4 px-2 sm:px-4 pt-2.5 pb-2 bg-white/80 backdrop-blur-md border-b border-slate-200/50 space-y-2.5 transition-all shadow-xs">
+            
+            {/* Linha Superior: Título & Ações */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-lg sm:text-xl font-black text-slate-900 leading-tight">Mercado UCM</h1>
+                <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Campus Pemba · Economia Circular Académica</p>
+              </div>
+              <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
+                  onClick={() => showToast('Sem novas notificações no seu curso.', 'info')}
+                  className="p-2 bg-white/80 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-full shadow-xs transition-transform active:scale-90 duration-150 min-h-[38px] min-w-[38px] flex items-center justify-center"
+                  title="Notificações"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                 </button>
-              )}
+                <button
+                  onClick={() => setIsWizardOpen(true)}
+                  className="hidden sm:flex px-4 py-2 bg-blue-900 hover:bg-blue-800 active:scale-95 text-white font-bold rounded-full shadow-md shadow-blue-900/20 text-xs items-center min-h-[38px] transition-all duration-150"
+                >
+                  <Plus className="w-4 h-4 mr-1.5 text-ucm-gold" /> Anunciar
+                </button>
+              </div>
             </div>
 
-            {/* Botão Filtrar — só aparece no mobile/tablet */}
-            <button
-              onClick={openSheet}
-              className={`lg:hidden relative flex items-center space-x-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all min-h-[44px] sm:min-h-[46px] shadow-xs ${
-                activeAdvancedFiltersCount > 0
-                  ? 'bg-persian text-white border-persian shadow-persian/30 shadow-md'
-                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-              }`}
-              title="Filtros avançados"
-            >
-              <SlidersHorizontal className={`w-4 h-4 ${activeAdvancedFiltersCount > 0 ? 'text-carrot' : 'text-slate-500'}`} />
-              <span className="hidden xs:inline">Filtrar</span>
-              {activeAdvancedFiltersCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-carrot text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm">
-                  {activeAdvancedFiltersCount}
-                </span>
-              )}
-            </button>
-          </div>
+            {/* Linha Central: Barra de Pesquisa "Soft" + Botão Filtrar */}
+            <div className="flex space-x-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-100 hover:bg-slate-100/80 focus:bg-white text-slate-800 placeholder-slate-400 border border-transparent focus:border-slate-200 rounded-full shadow-inner-xs focus:ring-2 focus:ring-blue-900/15 focus:outline-none text-xs sm:text-sm min-h-[42px] transition-all duration-200"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 bg-slate-200 hover:bg-slate-300 rounded-full transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
 
-          {/* ─── CHIPS DE CATEGORIAS (carrossel horizontal) ─── */}
-          <div className="flex space-x-2 overflow-x-auto pb-1.5 scrollbar-none -mx-2 px-2 sm:mx-0 sm:px-0">
-            <button
-              onClick={() => setSelectedCategory('')}
-              className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[34px] sm:min-h-[36px] flex items-center space-x-1.5 border ${
-                selectedCategory === ''
-                  ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Todos</span>
-            </button>
-            {CATEGORIES.map((cat) => (
+              {/* Botão Filtrar (mobile/tablet com animação tátil) */}
               <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all min-h-[34px] sm:min-h-[36px] flex items-center space-x-1.5 border ${
-                  selectedCategory === cat
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                    : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                onClick={openSheet}
+                className={`lg:hidden relative flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-full border text-xs font-bold transition-transform active:scale-95 duration-150 min-h-[42px] shadow-xs ${
+                  activeAdvancedFiltersCount > 0
+                    ? 'bg-blue-900 text-white border-blue-900 shadow-blue-900/30 shadow-md'
+                    : 'bg-slate-100 text-slate-700 border-transparent hover:bg-slate-200/70'
+                }`}
+                title="Filtros avançados"
+              >
+                <SlidersHorizontal className={`w-4 h-4 ${activeAdvancedFiltersCount > 0 ? 'text-ucm-gold' : 'text-slate-500'}`} />
+                <span className="hidden xs:inline">Filtrar</span>
+                {activeAdvancedFiltersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-carrot text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm">
+                    {activeAdvancedFiltersCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Linha Inferior: Filtros em "Pills" Deslizantes (Horizontal Scroll) */}
+            <div className="flex space-x-2 overflow-x-auto scrollbar-hide py-1 -mx-2 px-2 sm:mx-0 sm:px-0">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('')}
+                className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-transform active:scale-90 duration-150 flex items-center space-x-1.5 shadow-xs ${
+                  selectedCategory === ''
+                    ? 'bg-blue-900 text-white shadow-md shadow-blue-900/25 font-bold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
                 }`}
               >
-                {renderCategoryIcon(cat)}
-                <span>{cat}</span>
+                <Globe className={`w-3.5 h-3.5 shrink-0 ${selectedCategory === '' ? 'text-ucm-emerald' : 'text-slate-400'}`} />
+                <span>Todos</span>
               </button>
-            ))}
+              {CATEGORIES.map((cat) => {
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(isSelected ? '' : cat)}
+                    className={`shrink-0 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-transform active:scale-90 duration-150 flex items-center space-x-1.5 shadow-xs ${
+                      isSelected
+                        ? 'bg-blue-900 text-white shadow-md shadow-blue-900/25 font-bold'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                    }`}
+                  >
+                    {renderCategoryIcon(cat, isSelected)}
+                    <span>{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* ─── LINHA DE ESTADO DOS FILTROS / LIMPAR ─── */}
