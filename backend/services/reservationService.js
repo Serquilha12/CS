@@ -2,14 +2,46 @@ const { supabaseAdmin } = require('../config/supabase');
 
 class ReservationService {
   async createReservation(buyerId, { listing_id, agreed_price_mzn, meeting_point }) {
-    // Obter o anúncio
+    // 1. Tentar execução atómica transacional com bloqueio pessimista (SELECT ... FOR UPDATE via RPC)
+    try {
+      const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('reserve_listing_atomic', {
+        p_listing_id: listing_id,
+        p_buyer_id: buyerId,
+        p_agreed_price: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : null,
+        p_meeting_point: meeting_point || null
+      });
+
+      if (!rpcErr && rpcRes) {
+        // Enriquecer os relacionamentos com listings e perfis
+        const { data: fullReservation } = await supabaseAdmin
+          .from('reservations')
+          .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+          .eq('id', rpcRes.id)
+          .single();
+
+        return fullReservation || rpcRes;
+      }
+
+      // Se o erro foi gerado intencionalmente pela procedure (ex: item já reservado ou próprio anúncio)
+      if (rpcErr && (rpcErr.message?.includes('Concorrência') || rpcErr.message?.includes('próprio anúncio') || rpcErr.message?.includes('não se encontra disponível'))) {
+        throw new Error(rpcErr.message);
+      }
+    } catch (e) {
+      if (!e.message?.includes('reserve_listing_atomic') && !e.code?.includes('PGRST202') && e.code !== '42883') {
+        throw e;
+      }
+      // Se a procedure ainda não foi criada no banco, procede com o fallback atómico no Node.js
+    }
+
+    // 2. Fallback de Alta Concorrência: Bloqueio Otimista Condicional no Express
     const { data: listing, error: listErr } = await supabaseAdmin
       .from('listings')
       .select('*')
       .eq('id', listing_id)
+      .is('deleted_at', null)
       .single();
 
-    if (listErr || !listing) throw new Error('Anúncio não encontrado.');
+    if (listErr || !listing) throw new Error('Anúncio não encontrado ou já foi removido.');
     if (listing.owner_id === buyerId) throw new Error('Não pode reservar o seu próprio anúncio.');
     if (['reserved', 'sold', 'removed', 'suspended'].includes(listing.status)) {
       throw new Error('Este anúncio já não se encontra disponível para reserva.');
@@ -30,7 +62,21 @@ class ReservationService {
       return existingReservation;
     }
 
-    // Criar a reserva com fallback gracioso caso as colunas de confirmação dupla ainda não existam no Supabase
+    // Atomicidade: Altera status para 'negotiating' apenas se ainda for 'active'
+    const { data: lockedListing, error: lockErr } = await supabaseAdmin
+      .from('listings')
+      .update({ status: 'negotiating', updated_at: new Date() })
+      .eq('id', listing_id)
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .select('id, owner_id, price_mzn, campus_location')
+      .maybeSingle();
+
+    if (lockErr || !lockedListing) {
+      throw new Error('Este anúncio acabou de ser reservado ou já não se encontra disponível para nova negociação.');
+    }
+
+    // Criar a reserva garantindo atomicidade
     const basePayload = {
       listing_id,
       buyer_id: buyerId,
@@ -53,25 +99,19 @@ class ReservationService {
 
     if (!fullErr && fullRes) {
       reservation = fullRes;
-    } else if (fullErr && (fullErr.message?.includes('buyer_confirmed') || fullErr.code === '42703' || fullErr.code === 'PGRST204')) {
+    } else {
       const { data: fallbackRes, error: fallbackErr } = await supabaseAdmin
         .from('reservations')
         .insert(basePayload)
         .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
         .single();
 
-      if (fallbackErr) throw new Error(fallbackErr.message);
+      if (fallbackErr) {
+        // Reverter status do anúncio caso a inserção falhe
+        await supabaseAdmin.from('listings').update({ status: 'active' }).eq('id', listing_id);
+        throw new Error(fallbackErr.message);
+      }
       reservation = fallbackRes;
-    } else {
-      throw new Error(fullErr.message);
-    }
-
-    // Sinalizar o anúncio em negociação apenas se estiver ativo
-    if (listing.status === 'active') {
-      await supabaseAdmin
-        .from('listings')
-        .update({ status: 'negotiating' })
-        .eq('id', listing_id);
     }
 
     return reservation;
@@ -80,56 +120,49 @@ class ReservationService {
   async acceptReservation(sellerId, reservationId) {
     const { data: reservation } = await supabaseAdmin
       .from('reservations')
-      .select('*, listings:listing_id(status)')
+      .select('*, listings:listing_id(status, deleted_at)')
       .eq('id', reservationId)
       .single();
 
     if (!reservation) throw new Error('Reserva não encontrada.');
     if (reservation.seller_id !== sellerId) throw new Error('Apenas o vendedor pode aceitar a reserva.');
 
-    // Proteção de Race Condition: se o anúncio já foi reservado ou vendido
-    if (reservation.listings?.status === 'reserved' || reservation.listings?.status === 'sold') {
-      throw new Error('Este anúncio já foi reservado por outro colega.');
+    // Bloqueio Otimista Atómico no Anúncio: Garante que o item ainda está em 'active' ou 'negotiating'
+    const { data: lockedListing, error: lockErr } = await supabaseAdmin
+      .from('listings')
+      .update({ status: 'reserved', updated_at: new Date() })
+      .eq('id', reservation.listing_id)
+      .in('status', ['active', 'negotiating'])
+      .is('deleted_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (lockErr || !lockedListing) {
+      throw new Error('Este anúncio já se encontra reservado por outro colega ou foi vendido.');
     }
 
-    let data = null;
     const { data: fullUpdate, error: updateErr } = await supabaseAdmin
       .from('reservations')
-      .update({ status: 'accepted' })
+      .update({ status: 'accepted', updated_at: new Date() })
       .eq('id', reservationId)
       .select('*, listings:listing_id(title)')
       .single();
 
-    if (!updateErr && fullUpdate) {
-      data = fullUpdate;
-    } else {
-      throw new Error(updateErr.message);
+    if (updateErr || !fullUpdate) {
+      // Reverter se falhar
+      await supabaseAdmin.from('listings').update({ status: 'negotiating' }).eq('id', reservation.listing_id);
+      throw new Error(updateErr ? updateErr.message : 'Erro ao atualizar estado da reserva.');
     }
 
-    // Mudar anúncio para reservado
-    await supabaseAdmin
-      .from('listings')
-      .update({ status: 'reserved' })
-      .eq('id', reservation.listing_id);
-
     // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrência
-    const cancelRes = await supabaseAdmin
+    await supabaseAdmin
       .from('reservations')
       .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega' })
       .eq('listing_id', reservation.listing_id)
       .eq('status', 'pending')
       .neq('id', reservationId);
 
-    if (cancelRes.error) {
-      await supabaseAdmin
-        .from('reservations')
-        .update({ status: 'cancelled' })
-        .eq('listing_id', reservation.listing_id)
-        .eq('status', 'pending')
-        .neq('id', reservationId);
-    }
-
-    return data;
+    return fullUpdate;
   }
 
   async confirmDouble(userId, reservationId, roleType) {

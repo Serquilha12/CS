@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { 
   Search, SlidersHorizontal, Bell, Plus, X, ChevronDown, Check, Tag, Zap,
   Globe, BookOpen, Calculator, Laptop, Pencil, FlaskConical, Package,
-  ShoppingBag, Repeat, Gift, Handshake, DollarSign
+  ShoppingBag, Repeat, Gift, Handshake, DollarSign, Loader2
 } from 'lucide-react';
 import { useListings } from '../hooks/useListings';
 import { useToast } from '../context/ToastContext';
@@ -96,7 +96,15 @@ export function Marketplace() {
     closeSheet();
   }
 
-  const { listings, loading, createListing, refresh } = useListings({
+  const { 
+    listings, 
+    loading, 
+    loadingMore, 
+    hasMore, 
+    loadMore, 
+    createListing, 
+    refresh 
+  } = useListings({
     category: selectedCategory,
     search: searchTerm
   });
@@ -484,17 +492,43 @@ export function Marketplace() {
               onAction={() => setIsWizardOpen(true)}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
-              {filteredListings.map((item) => (
-                <MaterialCard
-                  key={item.id}
-                  item={item}
-                  onClick={() => navigate(`/item/${item.id}`)}
-                  onActionClick={handleActionClick}
-                  actionText="Solicitar / Negociar"
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
+                {filteredListings.map((item) => (
+                  <MaterialCard
+                    key={item.id}
+                    item={item}
+                    onClick={() => navigate(`/item/${item.id}`)}
+                    onActionClick={handleActionClick}
+                    actionText="Solicitar / Negociar"
+                  />
+                ))}
+              </div>
+
+              {/* Controlo de Paginação por Cursor / Infinite Scroll */}
+              {hasMore && (
+                <div className="pt-8 pb-4 text-center">
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-white border border-slate-200 hover:border-persian/40 text-slate-800 hover:text-persian font-bold text-xs rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-95 min-h-[48px]"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-persian" />
+                        <span>A carregar mais materiais...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Carregar Mais Artigos</span>
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

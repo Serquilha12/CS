@@ -19,8 +19,8 @@ class ListingController {
 
   async getAll(req, res, next) {
     try {
-      const { category, course, search, page, limit } = req.query;
-      const result = await listingService.getListings({ category, course, search, page, limit });
+      const { category, course, search, cursor, page, limit } = req.query;
+      const result = await listingService.getListings({ category, course, search, cursor, page, limit });
 
       return res.status(200).json({
         success: true,
@@ -45,7 +45,11 @@ class ListingController {
 
   async getById(req, res, next) {
     try {
-      const listing = await listingService.getListingById(req.params.id);
+      const listing = await listingService.getListingById(
+        req.params.id, 
+        req.user?.id || null, 
+        req.user?.role || null
+      );
       return res.status(200).json({
         success: true,
         data: listing

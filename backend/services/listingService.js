@@ -53,14 +53,83 @@ class ListingService {
     return data;
   }
 
-  async getListings({ category, course, search, page = 1, limit = 15 }) {
-    const offset = (page - 1) * limit;
+  async getListings({ category, course, search, cursor, page, limit = 20 }) {
+    const numericLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
+    // Estratégia de Paginação por Cursor (B-Tree de alta performance e sem duplicados)
+    if (cursor) {
+      let cursorTimestamp = null;
+      let cursorId = null;
+
+      try {
+        if (cursor.includes('_')) {
+          const parts = cursor.split('_');
+          cursorTimestamp = parts[0];
+          cursorId = parts[1];
+        } else {
+          // Se for passado diretamente o ID do item anterior
+          const { data: anchorItem } = await supabaseAdmin
+            .from('listings')
+            .select('created_at, id')
+            .eq('id', cursor)
+            .single();
+
+          if (anchorItem) {
+            cursorTimestamp = anchorItem.created_at;
+            cursorId = anchorItem.id;
+          }
+        }
+      } catch (e) {
+        // Se falhar o parse do cursor, ignora
+      }
+
+      let query = supabaseAdmin
+        .from('listings')
+        .select('*, profiles:owner_id(full_name, campus)')
+        .is('deleted_at', null)
+        .in('status', ['active', 'negotiating'])
+        .order('created_at', { ascending: false })
+        .limit(numericLimit + 1);
+
+      if (cursorTimestamp) {
+        query = query.lt('created_at', cursorTimestamp);
+      }
+      if (category) query = query.eq('category', category);
+      if (course) query = query.eq('course', course);
+      if (search) query = query.ilike('title', `%${search}%`);
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const items = data || [];
+      const hasMore = items.length > numericLimit;
+      const resultListings = hasMore ? items.slice(0, numericLimit) : items;
+
+      let nextCursor = null;
+      if (hasMore && resultListings.length > 0) {
+        const last = resultListings[resultListings.length - 1];
+        nextCursor = `${last.created_at}_${last.id}`;
+      }
+
+      return {
+        listings: resultListings,
+        nextCursor,
+        hasMore,
+        limit: numericLimit
+      };
+    }
+
+    // Modo Padrão / Retrocompatibilidade por Offset & Paginação Inicial por Cursor
+    const currentPage = Number(page) || 1;
+    const offset = (currentPage - 1) * numericLimit;
+
     let query = supabaseAdmin
       .from('listings')
       .select('*, profiles:owner_id(full_name, campus)', { count: 'exact' })
+      .is('deleted_at', null)
       .in('status', ['active', 'negotiating'])
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + numericLimit); // Pede limit + 1 para extrair nextCursor
 
     if (category) query = query.eq('category', category);
     if (course) query = query.eq('course', course);
@@ -69,22 +138,39 @@ class ListingService {
     const { data, count, error } = await query;
     if (error) throw new Error(error.message);
 
+    const items = data || [];
+    const hasMore = items.length > numericLimit;
+    const resultListings = hasMore ? items.slice(0, numericLimit) : items;
+
+    let nextCursor = null;
+    if (resultListings.length > 0) {
+      const last = resultListings[resultListings.length - 1];
+      nextCursor = `${last.created_at}_${last.id}`;
+    }
+
     return {
-      listings: data || [],
+      listings: resultListings,
       total: count || 0,
-      page: Number(page),
-      totalPages: Math.ceil((count || 0) / limit)
+      page: currentPage,
+      totalPages: Math.ceil((count || 0) / numericLimit),
+      nextCursor,
+      hasMore
     };
   }
 
-  async getListingById(id) {
+  async getListingById(id, requesterId = null, requesterRole = null) {
     const { data, error } = await supabaseAdmin
       .from('listings')
       .select('*, profiles:owner_id(full_name, email, phone_number, campus)')
       .eq('id', id)
       .single();
 
-    if (error) throw new Error('Anúncio não encontrado');
+    if (error || !data) throw new Error('Anúncio não encontrado');
+
+    // Validação de Soft Delete: Oculta se apagado a menos que seja o proprietário ou administrador
+    if (data.deleted_at && data.owner_id !== requesterId && requesterRole !== 'admin') {
+      throw new Error('Este anúncio foi removido pelo anunciante.');
+    }
 
     return data;
   }
@@ -94,6 +180,7 @@ class ListingService {
       .from('listings')
       .select('*')
       .eq('owner_id', userId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -103,7 +190,7 @@ class ListingService {
   async deleteListing(listingId, userId, userRole) {
     const { data: listing } = await supabaseAdmin
       .from('listings')
-      .select('owner_id')
+      .select('owner_id, status')
       .eq('id', listingId)
       .single();
 
@@ -112,9 +199,15 @@ class ListingService {
       throw new Error('Sem permissão para apagar este anúncio');
     }
 
+    // ARQUITETURA DE DELEÇÃO LÓGICA (SOFT DELETE):
+    // Preserva integridade referencial com chat_messages e audit logs
     const { error } = await supabaseAdmin
       .from('listings')
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        status: 'removed',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', listingId);
 
     if (error) throw new Error(error.message);

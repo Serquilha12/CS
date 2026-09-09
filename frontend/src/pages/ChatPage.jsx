@@ -1,13 +1,26 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Send, CheckCircle2, ShieldAlert, XCircle, Clock, CheckCheck, Loader2, ArrowLeft, Camera, ShieldCheck, MapPin, AlertTriangle, X } from 'lucide-react';
+import { 
+  Send, CheckCircle2, ShieldAlert, XCircle, Clock, CheckCheck, Loader2, 
+  ArrowLeft, Camera, ShieldCheck, MapPin, AlertTriangle, X, RefreshCw, 
+  WifiOff, MessageSquare, Flag, Search, User, ChevronRight, Sparkles 
+} from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useChat } from '../hooks/useChat';
+import { useConversations } from '../hooks/useConversations';
 import { fetchApi } from '../services/api';
 import { CameraModal } from '../components/CameraModal';
 import { compressImage } from '../utils/imageCompressor';
 import { supabase } from '../services/supabaseClient';
+
+const QUICK_REPLIES = [
+  'Ainda está disponível?',
+  'Podemos encontrar-nos na Biblioteca Central?',
+  'Podemos encontrar-nos às 13h?',
+  'Aceita negociar o valor?',
+  'Já cheguei ao local combinado!'
+];
 
 export function ChatPage() {
   const { user } = useContext(AuthContext);
@@ -15,30 +28,54 @@ export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Caso navegue a partir de um anúncio específico:
+  // Caso navegue a partir de um anúncio específico
   const listingFromState = location.state?.listing || null;
-
   const [activeListing, setActiveListing] = useState(listingFromState);
+  const [customReceiverId, setCustomReceiverId] = useState(null);
+
+  // Lista de conversas ativas (Inbox)
+  const { conversations, loading: loadingConversations, refresh: refreshConversations } = useConversations();
+  const [conversationSearch, setConversationSearch] = useState('');
+
   const [reservation, setReservation] = useState(null);
   const [loadingReservation, setLoadingReservation] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
-  // Estado para Modal de Motivo de Cancelamento
+  // Modais de Cancelamento e Denúncia
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [selectedReason, setSelectedReason] = useState('Desistência do comprador');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('Comportamento inadequado ou suspeita de fraude académica');
 
-  const receiverId = listingFromState?.owner_id !== user?.id
-    ? listingFromState?.owner_id
-    : reservation?.buyer_id;
+  const messagesEndRef = useRef(null);
 
-  const { messages, loading: loadingChat, sendMessage } = useChat({
+  const receiverId = customReceiverId || (
+    activeListing?.owner_id !== user?.id
+      ? activeListing?.owner_id
+      : reservation?.buyer_id
+  );
+
+  const { 
+    messages, 
+    loading: loadingChat, 
+    sendMessage, 
+    retryMessage, 
+    handleTypingActivity,
+    isPartnerTyping,
+    connectionStatus 
+  } = useChat({
     listingId: activeListing?.id,
     receiverId
   });
 
   const [newMessageText, setNewMessageText] = useState('');
+
+  // Auto-scroll suave para o final do chat sempre que uma nova mensagem for adicionada
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isPartnerTyping]);
 
   useEffect(() => {
     if (activeListing?.id) {
@@ -69,6 +106,7 @@ export function ChatPage() {
         showToast('Reserva aceite! O item foi marcado como Reservado e saiu do feed público.', 'success');
         setReservation(res.data);
         setActiveListing((prev) => ({ ...prev, status: 'reserved' }));
+        refreshConversations();
       }
     } catch (err) {
       showToast(err.message || 'Erro ao aceitar reserva.', 'error');
@@ -91,6 +129,7 @@ export function ChatPage() {
         if (res.isDoubleConfirmed) {
           setActiveListing((prev) => ({ ...prev, status: 'sold' }));
         }
+        refreshConversations();
       }
     } catch (err) {
       showToast(err.message || 'Erro ao confirmar.', 'error');
@@ -113,6 +152,7 @@ export function ChatPage() {
         setReservation(res.data);
         setActiveListing((prev) => ({ ...prev, status: 'active' }));
         setIsCancelModalOpen(false);
+        refreshConversations();
       }
     } catch (err) {
       showToast(err.message || 'Erro ao cancelar reserva.', 'error');
@@ -122,15 +162,22 @@ export function ChatPage() {
   }
 
   async function handleSendSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!newMessageText.trim()) return;
 
     try {
       await sendMessage(newMessageText);
       setNewMessageText('');
+      refreshConversations();
     } catch (err) {
       showToast(err.message || 'Erro ao enviar mensagem.', 'error');
     }
+  }
+
+  function handleQuickReply(replyText) {
+    sendMessage(replyText).catch((err) => {
+      showToast(err.message || 'Erro ao enviar resposta rápida.', 'error');
+    });
   }
 
   function handleAttachPhoto() {
@@ -142,7 +189,7 @@ export function ChatPage() {
 
     try {
       setIsUploadingPhoto(true);
-      showToast('A otimizar fotografia capturada...', 'info');
+      showToast('A otimizar fotografia...', 'info');
 
       const compressedFile = await compressImage(rawFile, 1024, 1024, 0.8);
       let publicUrl = null;
@@ -177,6 +224,7 @@ export function ChatPage() {
       if (publicUrl) {
         await sendMessage(`[Fotografia do Material] ${publicUrl}`);
         showToast('Fotografia enviada com sucesso na conversa!', 'success');
+        refreshConversations();
       } else {
         throw new Error('Não foi possível carregar a foto para a conversa.');
       }
@@ -187,243 +235,490 @@ export function ChatPage() {
     }
   }
 
+  async function handleSendReport() {
+    if (!activeListing) return;
+    try {
+      setActionLoading(true);
+      await fetchApi('/admin/reports', {
+        method: 'POST',
+        body: {
+          listing_id: activeListing.id,
+          reported_user_id: receiverId,
+          reason: reportReason,
+          details: `Denúncia registada no chat do anúncio "${activeListing.title}". Última interação reportada para moderação.`
+        }
+      });
+      showToast('Denúncia enviada à moderação académica da UCM Pemba.', 'success');
+      setIsReportModalOpen(false);
+    } catch (e) {
+      showToast(e.message || 'Erro ao submeter denúncia.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function handleSelectConversation(conv) {
+    setActiveListing(conv.listing);
+    setCustomReceiverId(conv.partner_id);
+  }
+
   const isSeller = activeListing?.owner_id === user?.id;
   const isBuyer = !isSeller;
-
-  // Verificação de Race Condition: Item reservado por outro colega
-  const isReservedByAnother = activeListing?.status === 'reserved' && reservation && reservation.buyer_id !== user?.id && isBuyer;
 
   function renderStatusBadge(status) {
     switch (status) {
       case 'negotiating':
         return (
-          <span className="text-[10px] sm:text-xs font-black px-3 py-1 bg-amber-500 text-white rounded-full shadow-xs flex items-center">
-            <Clock className="w-3 h-3 mr-1" /> Negociação em Curso
+          <span className="text-[10px] font-black px-2.5 py-1 bg-amber-500 text-white rounded-full shadow-xs flex items-center">
+            <Clock className="w-3 h-3 mr-1" /> Negociação
           </span>
         );
       case 'reserved':
         return (
-          <span className="text-[10px] sm:text-xs font-black px-3 py-1 bg-persian text-white rounded-full shadow-xs flex items-center">
+          <span className="text-[10px] font-black px-2.5 py-1 bg-persian text-white rounded-full shadow-xs flex items-center">
             <CheckCircle2 className="w-3 h-3 mr-1 text-carrot" /> Reservado
           </span>
         );
       case 'sold':
       case 'completed':
         return (
-          <span className="text-[10px] sm:text-xs font-black px-3 py-1 bg-emerald-600 text-white rounded-full shadow-xs flex items-center">
+          <span className="text-[10px] font-black px-2.5 py-1 bg-emerald-600 text-white rounded-full shadow-xs flex items-center">
             <CheckCheck className="w-3 h-3 mr-1" /> Concluído
           </span>
         );
       default:
         return (
-          <span className="text-[10px] sm:text-xs font-black px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full capitalize">
+          <span className="text-[10px] font-black px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full capitalize">
             {status || 'Disponível'}
           </span>
         );
     }
   }
 
+  const filteredConversations = conversations.filter((c) => {
+    if (!conversationSearch.trim()) return true;
+    const term = conversationSearch.toLowerCase();
+    return (
+      c.partner?.full_name?.toLowerCase().includes(term) ||
+      c.listing?.title?.toLowerCase().includes(term) ||
+      c.last_message?.text?.toLowerCase().includes(term)
+    );
+  });
+
   return (
-    <div className="max-w-2xl mx-auto p-4 flex flex-col h-[calc(100vh-80px)]">
-      {/* Botão de Regresso com Seta ArrowLeft */}
-      <div className="flex items-center space-x-2 mb-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 bg-white border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shadow-xs"
-          title="Regressar à Lista / Mercado"
+    <div className="max-w-6xl mx-auto p-2 sm:p-4 h-[calc(100vh-80px)] flex flex-col">
+      {/* Layout Split-View: Inbox à esquerda, Chat à direita */}
+      <div className="flex-1 flex bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden min-h-0">
+        
+        {/* ─── COLUNA ESQUERDA: CAIXA DE ENTRADA (INBOX) ─── */}
+        <aside 
+          className={`w-full lg:w-80 xl:w-96 border-r border-slate-100 flex flex-col bg-slate-50/50 ${
+            activeListing ? 'hidden lg:flex' : 'flex'
+          }`}
         >
-          <ArrowLeft className="w-5 h-5 mr-1 text-persian" />
-          <span className="text-xs font-extrabold">Voltar</span>
-        </button>
-      </div>
-
-      {/* Header Contextualizado do Chat com o Material */}
-      {activeListing ? (
-        <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm mb-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img
-                src={activeListing.images?.[0] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'}
-                alt={activeListing.title}
-                className="w-14 h-14 rounded-2xl object-cover border border-slate-100 shadow-xs bg-slate-50"
-              />
-              <div>
-                <h2 className="font-extrabold text-slate-900 text-sm line-clamp-1">{activeListing.title}</h2>
-                <div className="flex items-center space-x-2 text-xs mt-0.5">
-                  <span className="font-black text-persian">
-                    {activeListing.transaction_type === 'doacao' || activeListing.transaction_type === 'emprestimo'
-                      ? 'Grátis'
-                      : `${activeListing.price_mzn} MZN`}
-                  </span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-slate-500 capitalize font-bold">{activeListing.transaction_type || 'Venda'}</span>
+          {/* Header Inbox */}
+          <div className="p-4 border-b border-slate-100 bg-white space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-persian/10 text-persian flex items-center justify-center font-black text-sm">
+                  <MessageSquare className="w-4 h-4" />
                 </div>
+                <h1 className="text-base font-black text-slate-900">Mensagens</h1>
               </div>
-            </div>
-
-            {renderStatusBadge(activeListing.status)}
-          </div>
-
-          {/* RECOMENDAÇÃO INTEGRADA DE SEGURANÇA DE ENCONTRO NO CAMPUS UCM PEMBA */}
-          <div className="p-3 bg-platinum/80 rounded-2xl border border-slate-200/80 flex items-start space-x-2 text-xs text-slate-700">
-            <MapPin className="w-4 h-4 text-carrot shrink-0 mt-0.5" />
-            <div>
-              <span className="font-black text-slate-900">Encontro Seguro no Campus UCM:</span>
-              <p className="text-[11px] text-slate-600 mt-0.5">
-                Recomendamos que a entrega ou pagamento seja feito presencialmente num dos pontos oficiais: <strong>Em frente a biblioteca</strong>, <strong>Amendoeira</strong> ou <strong>Entrada de estudantes</strong>.
-              </p>
-            </div>
-          </div>
-
-          {/* ALERTA DE RACE CONDITION: RESERVADO POR OUTRO UTILIZADOR */}
-          {isReservedByAnother && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center text-xs font-bold text-amber-900">
-              <AlertTriangle className="w-5 h-5 mr-2 text-amber-600 shrink-0" />
-              <span>Este item acabou de ser reservado por outro colega. Serás notificado caso a reserva seja cancelada.</span>
-            </div>
-          )}
-
-          {/* BARRA DE AÇÕES INTEGRADAS DA RESERVA NO CHAT */}
-          {reservation && !isReservedByAnother && (
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              {/* Notificação de Sucesso quando o negócio é concluído */}
-              {reservation.status === 'completed' && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center text-xs font-bold text-emerald-900">
-                  <CheckCheck className="w-5 h-5 mr-2 text-emerald-600 shrink-0" />
-                  <span>Negócio Concluído! O material foi entregue e a transação registada no Painel Pessoal.</span>
-                </div>
-              )}
-
-              {/* Botões de Ação Dinâmicos com Touch Targets min-h-[44px] */}
-              {reservation.status !== 'completed' && (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  {/* Botão Aceitar Reserva (Vendedor quando Pendente) */}
-                  {isSeller && reservation.status === 'pending' && (
-                    <button
-                      onClick={handleAcceptReservation}
-                      disabled={actionLoading}
-                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center min-h-[44px]"
-                    >
-                      {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1.5" />}
-                      Aceitar Reserva
-                    </button>
-                  )}
-
-                  {/* Botão Confirmar Entrega (Vendedor no Encontro Presencial) */}
-                  {isSeller && (reservation.status === 'accepted' || activeListing.status === 'reserved') && (
-                    <button
-                      onClick={() => handleDoubleConfirm('seller')}
-                      disabled={actionLoading || reservation.seller_confirmed}
-                      className={`flex-1 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center min-h-[44px] ${
-                        reservation.seller_confirmed
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 cursor-default'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      }`}
-                    >
-                      <CheckCheck className="w-4 h-4 mr-1.5" />
-                      {reservation.seller_confirmed ? 'Entreguei o Material (Confirmado)' : 'Entreguei o Material'}
-                    </button>
-                  )}
-
-                  {/* Botão Confirmar Receção (Comprador no Encontro Presencial) */}
-                  {isBuyer && (reservation.status === 'accepted' || activeListing.status === 'reserved') && (
-                    <button
-                      onClick={() => handleDoubleConfirm('buyer')}
-                      disabled={actionLoading || reservation.buyer_confirmed}
-                      className={`flex-1 py-2.5 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center min-h-[44px] ${
-                        reservation.buyer_confirmed
-                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 cursor-default'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      }`}
-                    >
-                      <CheckCheck className="w-4 h-4 mr-1.5" />
-                      {reservation.buyer_confirmed ? 'Recebi o Material (Confirmado)' : 'Recebi o Material'}
-                    </button>
-                  )}
-
-                  {/* Botão Cancelar Reserva (Abre Modal de Motivo em 1 Clique) */}
-                  {reservation.status !== 'completed' && reservation.status !== 'cancelled' && (
-                    <button
-                      onClick={() => setIsCancelModalOpen(true)}
-                      disabled={actionLoading}
-                      className="px-3 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs rounded-xl transition-colors border border-rose-200 flex items-center shrink-0 min-h-[44px]"
-                      title="Cancelar Reserva"
-                    >
-                      <XCircle className="w-4 h-4 mr-1" /> Cancelar Reserva
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl p-4 text-center border border-slate-100 text-xs text-slate-500 mb-3">
-          Selecione um anúncio no mercado para conversar com o colega.
-        </div>
-      )}
-
-      {/* Área de Mensagens */}
-      <div className="flex-1 bg-white rounded-3xl p-4 border border-slate-100 shadow-sm overflow-y-auto space-y-3 mb-3 scrollbar-thin">
-        {loadingChat ? (
-          <div className="text-center text-xs text-slate-400 py-8">A carregar mensagens do chat...</div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-xs text-slate-400 py-12 space-y-1">
-            <p className="font-semibold text-slate-600">Nenhuma mensagem trocada ainda.</p>
-            <p>Combine aqui o horário e o ponto de encontro no campus da UCM Pemba!</p>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.sender_id === user?.id;
-            return (
-              <div
-                key={msg.id}
-                className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+              <button
+                onClick={() => navigate('/')}
+                className="text-xs text-persian hover:text-persian-hover font-bold transition-colors"
               >
-                <div
-                  className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                    isMe
-                      ? 'bg-persian text-white rounded-br-none shadow-sm font-medium'
-                      : 'bg-slate-100 text-slate-800 rounded-bl-none font-medium'
-                  }`}
-                >
-                  {msg.message_text}
-                </div>
+                Mercado
+              </button>
+            </div>
+
+            {/* Barra de Pesquisa de Conversas */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Pesquisar conversas ou livros..."
+                value={conversationSearch}
+                onChange={(e) => setConversationSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-100 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-persian border-none"
+              />
+            </div>
+          </div>
+
+          {/* Lista de Conversas */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100 scrollbar-thin">
+            {loadingConversations ? (
+              <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-persian" />
+                <p>A carregar conversas...</p>
               </div>
-            );
-          })
-        )}
+            ) : filteredConversations.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <p className="font-semibold text-slate-600">Nenhuma conversa encontrada.</p>
+                <p className="text-[11px] text-slate-400">Quando contactar um colega no mercado, a conversa aparecerá aqui.</p>
+                <button
+                  onClick={() => navigate('/')}
+                  className="px-4 py-2 bg-persian text-white text-xs font-bold rounded-xl shadow-xs"
+                >
+                  Explorar Materiais
+                </button>
+              </div>
+            ) : (
+              filteredConversations.map((conv) => {
+                const isSelected = activeListing?.id === conv.listing_id && receiverId === conv.partner_id;
+                const lastTime = conv.last_message?.created_at
+                  ? new Date(conv.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : '';
+
+                return (
+                  <button
+                    key={`${conv.listing_id}_${conv.partner_id}`}
+                    onClick={() => handleSelectConversation(conv)}
+                    className={`w-full p-3.5 text-left flex items-start space-x-3 transition-colors ${
+                      isSelected ? 'bg-persian/5 border-l-4 border-persian' : 'hover:bg-slate-100/70 bg-white'
+                    }`}
+                  >
+                    {/* Foto do Material ou Avatar */}
+                    <div className="relative shrink-0">
+                      <img
+                        src={conv.listing?.images?.[0] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=200&q=80'}
+                        alt={conv.listing?.title}
+                        className="w-12 h-12 rounded-xl object-cover border border-slate-100 shadow-xs bg-slate-100"
+                      />
+                      {conv.unread_count > 0 && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-carrot text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                          {conv.unread_count}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Detalhes da Conversa */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black text-slate-900 truncate">
+                          {conv.partner?.full_name}
+                        </h3>
+                        <span className="text-[10px] text-slate-400 font-semibold">{lastTime}</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-persian truncate mt-0.5">
+                        {conv.listing?.title}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {conv.last_message?.text?.startsWith('[Fotografia') ? '📷 Fotografia anexada' : conv.last_message?.text}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </aside>
+
+        {/* ─── COLUNA DIREITA: CONVERSA ATIVA ─── */}
+        <main 
+          className={`flex-1 flex flex-col bg-white min-w-0 ${
+            !activeListing ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
+          {activeListing ? (
+            <>
+              {/* Header do Chat / Barra de Ações Rápidas */}
+              <div className="p-3 sm:p-4 border-b border-slate-100 bg-white/90 backdrop-blur-md space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    {/* Botão Voltar para mobile */}
+                    <button
+                      onClick={() => setActiveListing(null)}
+                      className="p-2 bg-slate-100 text-slate-700 hover:text-slate-900 rounded-xl transition-colors lg:hidden shrink-0"
+                      title="Voltar à Caixa de Entrada"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+
+                    <img
+                      src={activeListing.images?.[0] || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=300&q=80'}
+                      alt={activeListing.title}
+                      className="w-10 h-10 rounded-xl object-cover border border-slate-100 shadow-xs shrink-0"
+                    />
+
+                    <div className="min-w-0">
+                      <h2 className="font-black text-slate-900 text-xs sm:text-sm truncate">
+                        {activeListing.title}
+                      </h2>
+                      <div className="flex items-center space-x-2 text-[11px]">
+                        <span className="font-extrabold text-persian">
+                          {activeListing.transaction_type === 'doacao' || activeListing.transaction_type === 'emprestimo'
+                            ? 'Grátis'
+                            : `${activeListing.price_mzn} MZN`}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-500 capitalize">{activeListing.transaction_type || 'Venda'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {renderStatusBadge(activeListing.status)}
+                    
+                    {/* Botão de Denúncia Rápida / Moderação Ética */}
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
+                      title="Reportar infração académica"
+                    >
+                      <Flag className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bloco de Gestão de Reserva / Confirmação Dupla */}
+                {reservation && (
+                  <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 text-xs text-slate-600 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-persian shrink-0" />
+                      <span className="text-[11px] truncate max-w-[200px] sm:max-w-xs">
+                        {reservation.meeting_point || activeListing.campus_location || 'Biblioteca Central'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5">
+                      {isSeller && reservation.status === 'pending' && (
+                        <button
+                          onClick={handleAcceptReservation}
+                          disabled={actionLoading}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center"
+                        >
+                          {actionLoading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                          Aceitar Reserva
+                        </button>
+                      )}
+
+                      {isSeller && (reservation.status === 'accepted' || activeListing.status === 'reserved') && (
+                        <button
+                          onClick={() => handleDoubleConfirm('seller')}
+                          disabled={actionLoading || reservation.seller_confirmed}
+                          className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center ${
+                            reservation.seller_confirmed
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <CheckCheck className="w-3.5 h-3.5 mr-1" />
+                          {reservation.seller_confirmed ? 'Entrega Confirmada' : 'Entreguei Material'}
+                        </button>
+                      )}
+
+                      {isBuyer && (reservation.status === 'accepted' || activeListing.status === 'reserved') && (
+                        <button
+                          onClick={() => handleDoubleConfirm('buyer')}
+                          disabled={actionLoading || reservation.buyer_confirmed}
+                          className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center ${
+                            reservation.buyer_confirmed
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          <CheckCheck className="w-3.5 h-3.5 mr-1" />
+                          {reservation.buyer_confirmed ? 'Receção Confirmada' : 'Recebi Material'}
+                        </button>
+                      )}
+
+                      {reservation.status !== 'completed' && reservation.status !== 'cancelled' && (
+                        <button
+                          onClick={() => setIsCancelModalOpen(true)}
+                          disabled={actionLoading}
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs transition-colors"
+                          title="Cancelar Reserva"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Banner de Reconexão */}
+              {connectionStatus === 'reconnecting' && (
+                <div className="bg-amber-50 border-b border-amber-200 text-amber-800 px-3.5 py-1.5 text-[11px] flex items-center justify-center space-x-2 animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                  <span>A reconectar em tempo real com o servidor...</span>
+                </div>
+              )}
+
+              {/* Área de Mensagens com Scroll Suave */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin bg-slate-50/30">
+                {loadingChat ? (
+                  <div className="text-center text-xs text-slate-400 py-8 space-y-2">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-persian" />
+                    <p>A carregar histórico da conversa...</p>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="text-center text-xs text-slate-400 py-12 space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-persian/10 text-persian flex items-center justify-center mx-auto">
+                      <Sparkles className="w-5 h-5 text-carrot" />
+                    </div>
+                    <p className="font-bold text-slate-700">Inicie a conversa!</p>
+                    <p className="text-slate-400 max-w-xs mx-auto text-[11px]">
+                      Combine o horário e o ponto de encontro seguro no campus da UCM Pemba.
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const isMe = msg.sender_id === user?.id;
+                    const isSending = msg.status === 'sending';
+                    const isFailed = msg.status === 'failed';
+                    const isRead = msg.status === 'read' || msg.is_read;
+                    const timeStr = msg.created_at
+                      ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '';
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed transition-all ${
+                            isMe
+                              ? isFailed
+                                ? 'bg-rose-600 text-white rounded-br-none shadow-sm'
+                                : isSending
+                                ? 'bg-persian/80 text-white rounded-br-none shadow-xs'
+                                : 'bg-persian text-white rounded-br-none shadow-sm'
+                              : 'bg-white border border-slate-100 text-slate-800 rounded-bl-none shadow-xs'
+                          }`}
+                        >
+                          {/* Fotografia anexada */}
+                          {msg.message_text.startsWith('[Fotografia do Material]') || (msg.message_text.startsWith('http') && (msg.message_text.includes('.webp') || msg.message_text.includes('.jpg') || msg.message_text.includes('.png'))) ? (
+                            <div className="space-y-1.5 py-1">
+                              <span className="text-[10px] opacity-80 font-bold block">Fotografia do Material</span>
+                              <img
+                                src={msg.message_text.replace('[Fotografia do Material]', '').trim()}
+                                alt="Foto do Material"
+                                className="rounded-xl max-h-56 w-auto object-cover cursor-pointer hover:opacity-95 shadow-xs border border-white/20"
+                                onClick={() => window.open(msg.message_text.replace('[Fotografia do Material]', '').trim(), '_blank')}
+                              />
+                            </div>
+                          ) : (
+                            msg.message_text
+                          )}
+                        </div>
+
+                        {/* Indicadores de Estado e Hora (Optimistic UI & Live Receipts) */}
+                        <div className="flex items-center space-x-1.5 mt-1 px-1 text-[10px] text-slate-400">
+                          <span>{timeStr}</span>
+                          {isMe && (
+                            <>
+                              {isSending && <Clock className="w-3 h-3 text-slate-400 animate-spin" />}
+                              {isFailed && (
+                                <button
+                                  onClick={() => retryMessage(msg.id)}
+                                  className="text-rose-600 hover:text-rose-700 font-bold flex items-center"
+                                >
+                                  <RefreshCw className="w-3 h-3 mr-0.5" /> Reenviar
+                                </button>
+                              )}
+                              {!isSending && !isFailed && (
+                                <CheckCheck className={`w-3.5 h-3.5 ${isRead ? 'text-sky-500' : 'text-slate-400'}`} />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {/* Balão Indicador de Digitação (Typing Indicator) */}
+                {isPartnerTyping && (
+                  <div className="flex items-center space-x-2 py-1.5 px-3.5 bg-white border border-slate-100 rounded-full w-fit shadow-xs animate-pulse">
+                    <span className="text-[11px] font-bold text-slate-600">O colega está a escrever</span>
+                    <div className="flex space-x-1">
+                      <span className="w-1.5 h-1.5 bg-persian rounded-full animate-bounce" />
+                      <span className="w-1.5 h-1.5 bg-persian rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <span className="w-1.5 h-1.5 bg-persian rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* ─── RESPOSTAS RÁPIDAS ACADÉMICAS (QUICK REPLIES) ─── */}
+              <div className="px-3 pt-2 pb-1 bg-white border-t border-slate-100 flex space-x-1.5 overflow-x-auto scrollbar-none">
+                {QUICK_REPLIES.map((reply) => (
+                  <button
+                    key={reply}
+                    type="button"
+                    onClick={() => handleQuickReply(reply)}
+                    className="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-persian/10 hover:text-persian text-slate-700 rounded-full text-[11px] font-bold transition-all border border-slate-200/60"
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+
+              {/* Caixa de Texto do Envio de Mensagem */}
+              <form onSubmit={handleSendSubmit} className="p-3 bg-white border-t border-slate-100 flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleAttachPhoto}
+                  className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-persian rounded-2xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+                  title="Anexar Fotografia"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+
+                <input
+                  type="text"
+                  placeholder="Escreva uma mensagem..."
+                  value={newMessageText}
+                  onChange={(e) => {
+                    setNewMessageText(e.target.value);
+                    if (handleTypingActivity) handleTypingActivity();
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-persian focus:bg-white focus:outline-none transition-all shadow-xs min-h-[44px]"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!newMessageText.trim()}
+                  className="p-3 bg-persian hover:bg-persian-hover disabled:opacity-40 text-white rounded-2xl shadow-md transition-all min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
+                  title="Enviar"
+                >
+                  <Send className="w-5 h-5 text-carrot" />
+                </button>
+              </form>
+            </>
+          ) : (
+            /* Estado de Boas-Vindas no Desktop (Nenhuma Conversa Selecionada) */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-slate-50/40">
+              <div className="w-16 h-16 rounded-3xl bg-persian/10 text-persian flex items-center justify-center shadow-xs">
+                <MessageSquare className="w-8 h-8 text-persian" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-slate-900">Caixa de Entrada da CampusStore</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                  Selecione uma conversa à esquerda ou explore o mercado para combinar encontros presenciais seguros na UCM Pemba.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/')}
+                className="px-5 py-2.5 bg-persian hover:bg-persian-hover text-white text-xs font-black rounded-xl shadow-sm transition-all"
+              >
+                Explorar Mercado
+              </button>
+            </div>
+          )}
+        </main>
       </div>
 
-      {/* Caixa de Texto do Envio de Mensagem */}
-      <form onSubmit={handleSendSubmit} className="flex space-x-2">
-        <button
-          type="button"
-          onClick={handleAttachPhoto}
-          className="p-3 bg-white border border-slate-200 text-slate-500 hover:text-persian rounded-2xl shadow-xs transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
-          title="Anexar Foto Extra do Material"
-        >
-          <Camera className="w-5 h-5" />
-        </button>
-
-        <input
-          type="text"
-          placeholder="Escreva uma mensagem..."
-          value={newMessageText}
-          onChange={(e) => setNewMessageText(e.target.value)}
-          className="flex-1 p-3.5 bg-white border border-slate-200 rounded-2xl text-base sm:text-sm focus:ring-2 focus:ring-persian focus:outline-none shadow-sm min-h-[48px]"
-        />
-
-        <button
-          type="submit"
-          className="p-3.5 bg-persian hover:bg-persian-hover text-white rounded-2xl shadow-md transition-all min-h-[48px] min-w-[48px] flex items-center justify-center shrink-0"
-          title="Enviar Mensagem"
-        >
-          <Send className="w-5 h-5 text-carrot" />
-        </button>
-      </form>
-
-      {/* MODAL DE MOTIVO DE CANCELAMENTO PRESENCIAL (1 CLIQUE) */}
+      {/* MODAL DE MOTIVO DE CANCELAMENTO */}
       {isCancelModalOpen && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
@@ -431,67 +726,93 @@ export function ChatPage() {
               <h3 className="text-base font-black text-slate-900 flex items-center">
                 <XCircle className="w-5 h-5 text-rose-600 mr-2" /> Motivo do Cancelamento
               </h3>
-              <button
-                onClick={() => setIsCancelModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
+              <button onClick={() => setIsCancelModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-500">
-              Indique a razão para cancelar esta reserva. O anúncio regressará imediatamente ao feed ativo.
-            </p>
-
             <div className="space-y-2">
-              {[
-                'Desistência do comprador',
-                'Estado do material diferente da descrição',
-                'Falta de acordo no valor final',
-                'Outro motivo'
-              ].map((reason) => (
-                <button
-                  key={reason}
-                  type="button"
-                  onClick={() => setSelectedReason(reason)}
-                  className={`w-full p-3.5 rounded-2xl text-xs font-bold text-left border transition-all flex items-center justify-between min-h-[44px] ${
-                    selectedReason === reason
-                      ? 'border-rose-500 bg-rose-50 text-rose-900 shadow-xs'
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
+              {['Desistência do comprador', 'Comprador não compareceu ao encontro', 'Material já não disponível', 'Outro motivo'].map((reason) => (
+                <label key={reason} className="flex items-center space-x-2 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer text-xs font-semibold">
+                  <input
+                    type="radio"
+                    name="cancellationReason"
+                    value={reason}
+                    checked={selectedReason === reason}
+                    onChange={(e) => setSelectedReason(e.target.value)}
+                    className="text-persian focus:ring-persian"
+                  />
                   <span>{reason}</span>
-                  {selectedReason === reason && <CheckCircle2 className="w-4 h-4 text-rose-600 shrink-0" />}
-                </button>
+                </label>
               ))}
             </div>
 
-            <div className="flex space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCancelModalOpen(false)}
-                className="w-1/2 py-3.5 bg-platinum hover:bg-slate-200 text-slate-700 font-extrabold rounded-2xl text-xs min-h-[48px]"
-              >
-                Voltar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCancelWithReason}
-                disabled={actionLoading}
-                className="w-1/2 py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-2xl text-xs shadow-md min-h-[48px] flex items-center justify-center"
-              >
-                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar'}
-              </button>
-            </div>
+            <button
+              onClick={handleConfirmCancelWithReason}
+              disabled={actionLoading}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center"
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar Cancelamento'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* Modal de Captura com Câmera ao Vivo para o Chat */}
+      {/* MODAL DE DENÚNCIA / MODERAÇÃO ÉTICA ACADÉMICA */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-slate-900 flex items-center">
+                <ShieldAlert className="w-5 h-5 text-rose-600 mr-2" /> Denúncia à Moderação
+              </h3>
+              <button onClick={() => setIsReportModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              A equipa de moderação da UCM Pemba analisará o histórico desta negociação para preservar o ambiente seguro e ético do campus.
+            </p>
+
+            <div className="space-y-2">
+              {[
+                'Comportamento inadequado ou ofensivo',
+                'Suspeita de fraude académica ou venda de testes',
+                'Preço abusivo ou tentativa de burla',
+                'Não comparecimento intencional'
+              ].map((reason) => (
+                <label key={reason} className="flex items-center space-x-2 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer text-xs font-semibold">
+                  <input
+                    type="radio"
+                    name="reportReason"
+                    value={reason}
+                    checked={reportReason === reason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="text-persian focus:ring-persian"
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+            </div>
+
+            <button
+              onClick={handleSendReport}
+              disabled={actionLoading}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center"
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submeter Denúncia'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Captura de Fotografia */}
       <CameraModal
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
         onCapture={handleCameraPhotoCapture}
+        isLoading={isUploadingPhoto}
       />
     </div>
   );

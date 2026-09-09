@@ -27,11 +27,37 @@ class ChatController {
   async getMessages(req, res, next) {
     try {
       const { listingId, otherUserId } = req.params;
-      const messages = await chatService.getMessagesBetweenUsers(listingId, req.user.id, otherUserId);
+      const { since } = req.query;
+      const messages = await chatService.getMessagesBetweenUsers(listingId, req.user.id, otherUserId, since || null);
 
       return res.status(200).json({
         success: true,
         data: messages
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getConversations(req, res, next) {
+    try {
+      const conversations = await chatService.getUserConversations(req.user.id);
+      return res.status(200).json({
+        success: true,
+        data: conversations
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async markAsRead(req, res, next) {
+    try {
+      const { listingId, otherUserId } = req.params;
+      await chatService.markMessagesAsRead(listingId, req.user.id, otherUserId);
+      return res.status(200).json({
+        success: true,
+        message: 'Mensagens marcadas como lidas.'
       });
     } catch (err) {
       next(err);
