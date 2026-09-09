@@ -14,13 +14,6 @@ import { CameraModal } from '../components/CameraModal';
 import { compressImage } from '../utils/imageCompressor';
 import { supabase } from '../services/supabaseClient';
 
-const QUICK_REPLIES = [
-  'Ainda está disponível?',
-  'Podemos encontrar-nos na Biblioteca Central?',
-  'Podemos encontrar-nos às 13h?',
-  'Aceita negociar o valor?',
-  'Já cheguei ao local combinado!'
-];
 
 export function ChatPage() {
   const { user } = useContext(AuthContext);
@@ -174,11 +167,6 @@ export function ChatPage() {
     }
   }
 
-  function handleQuickReply(replyText) {
-    sendMessage(replyText).catch((err) => {
-      showToast(err.message || 'Erro ao enviar resposta rápida.', 'error');
-    });
-  }
 
   function handleAttachPhoto() {
     setIsCameraOpen(true);
@@ -649,19 +637,6 @@ export function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* ─── RESPOSTAS RÁPIDAS ACADÉMICAS (QUICK REPLIES) ─── */}
-              <div className="px-3 pt-2 pb-1 bg-white border-t border-slate-100 flex space-x-1.5 overflow-x-auto scrollbar-none">
-                {QUICK_REPLIES.map((reply) => (
-                  <button
-                    key={reply}
-                    type="button"
-                    onClick={() => handleQuickReply(reply)}
-                    className="shrink-0 px-3 py-1.5 bg-slate-100 hover:bg-persian/10 hover:text-persian text-slate-700 rounded-full text-[11px] font-bold transition-all border border-slate-200/60"
-                  >
-                    {reply}
-                  </button>
-                ))}
-              </div>
 
               {/* Caixa de Texto do Envio de Mensagem */}
               <form onSubmit={handleSendSubmit} className="p-3 bg-white border-t border-slate-100 flex space-x-2">
