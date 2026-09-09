@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { UCM_COURSES } from '../constants';
 import { fetchApi } from '../services/api';
 import { Logo } from '../components/Logo';
+import { PasswordStrengthMeter, checkPasswordStrength } from '../components/PasswordStrengthMeter';
 
 export function LandingPage() {
   const { login, register } = useContext(AuthContext);
@@ -24,6 +25,8 @@ export function LandingPage() {
   // Estados de Palavra-passe Visível
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   // Estado de Carregamento nos Formulários
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +43,21 @@ export function LandingPage() {
   const [emailConfirmationSent, setEmailConfirmationSent] = useState(null);
 
   // Validação em Tempo Real de E-mail UCM com RegEx estrito
-  const UCM_EMAIL_REGEX = /^[\w-\.]+@ucm\.ac\.mz$/i;
+  const UCM_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@ucm\.ac\.mz$/i;
   const isLoginEmailValid = UCM_EMAIL_REGEX.test(loginData.email.trim());
   const isRegEmailValid = UCM_EMAIL_REGEX.test(regData.email.trim());
+
+  // Validação de Nome Completo: Mínimo 2 palavras e apenas caracteres alfabéticos válidos
+  const fullNameWords = regData.full_name.trim().split(/\s+/).filter(Boolean);
+  const isFullNameValid =
+    fullNameWords.length >= 2 &&
+    /^[a-zA-ZÀ-ÿ\s'-]+$/.test(regData.full_name.trim()) &&
+    regData.full_name.trim().length >= 4;
+
+  // Validação em Tempo Real da Política de Palavra-passe Forte
+  const { isStrong: isRegPasswordStrong } = checkPasswordStrength(regData.password);
+  const doPasswordsMatch = regData.password.length > 0 && regData.password === regConfirmPassword;
+  const isRegFormValid = isRegEmailValid && isFullNameValid && isRegPasswordStrong && doPasswordsMatch;
 
   async function handleLoginSubmit(e) {
     e.preventDefault();
@@ -72,12 +87,22 @@ export function LandingPage() {
     e.preventDefault();
 
     if (!isRegEmailValid) {
-      showToast('Apenas e-mails com a extensão @ucm.ac.mz podem criar conta.', 'warning');
+      showToast('Apenas e-mails institucionais com a extensão @ucm.ac.mz podem criar conta.', 'warning');
       return;
     }
 
-    if (regData.password.length < 6) {
-      showToast('A palavra-passe deve ter pelo menos 6 caracteres.', 'warning');
+    if (!isFullNameValid) {
+      showToast('Por favor, introduza o seu nome completo (pelo menos Nome e Apelido).', 'warning');
+      return;
+    }
+
+    if (!isRegPasswordStrong) {
+      showToast('A palavra-passe deve cumprir todos os 5 critérios de segurança.', 'warning');
+      return;
+    }
+
+    if (!doPasswordsMatch) {
+      showToast('As palavras-passe introduzidas não coincidem.', 'warning');
       return;
     }
 
@@ -86,6 +111,7 @@ export function LandingPage() {
       const emailSubmitted = regData.email.toLowerCase().trim();
       const res = await register({
         ...regData,
+        full_name: regData.full_name.trim().replace(/\s+/g, ' '),
         email: emailSubmitted
       });
 
@@ -712,15 +738,42 @@ export function LandingPage() {
             <form onSubmit={handleRegisterSubmit} className="space-y-3 sm:space-y-3.5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
-                <input
-                  type="text"
-                  required
-                  autoComplete="name"
-                  placeholder="Ex: Ancha Jussa"
-                  value={regData.full_name}
-                  onChange={(e) => setRegData({ ...regData, full_name: e.target.value })}
-                  className="w-full p-3 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    autoComplete="name"
+                    placeholder="Ex: Ancha Jussa"
+                    value={regData.full_name}
+                    onChange={(e) => setRegData({ ...regData, full_name: e.target.value })}
+                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                      regData.full_name.length > 0
+                        ? isFullNameValid
+                          ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
+                          : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                        : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
+                    }`}
+                  />
+                  {regData.full_name.length > 0 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {isFullNameValid ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-rose-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="min-h-[20px] mt-1 flex items-center">
+                  {regData.full_name.length > 0 && !isFullNameValid ? (
+                    <p className="text-[11px] font-bold text-rose-600 flex items-center animate-in fade-in duration-200">
+                      <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                      Introduza o nome completo com pelo menos Nome e Apelido
+                    </p>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Pelo menos 2 palavras (Nome e Apelido)</span>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -746,12 +799,13 @@ export function LandingPage() {
                     placeholder="estudante@ucm.ac.mz"
                     value={regData.email}
                     onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${regData.email.length > 0
+                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                      regData.email.length > 0
                         ? isRegEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
                           : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
                         : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
-                      }`}
+                    }`}
                   />
                   {regData.email.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -772,41 +826,86 @@ export function LandingPage() {
                       Apenas e-mails com @ucm.ac.mz são permitidos
                     </p>
                   ) : (
-                    <span className="text-[10px] text-slate-400">Verificação automática do domínio UCM</span>
+                    <span className="text-[10px] text-slate-400">Verificação automática do domínio institucional UCM</span>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Palavra-passe</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Palavra-passe Forte</label>
                 <div className="relative">
                   <input
                     type={showRegPassword ? 'text' : 'password'}
                     required
                     autoComplete="new-password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres (A-Z, a-z, 0-9, !@#$)"
                     value={regData.password}
                     onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    className="w-full p-3 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
+                    className={`w-full p-3 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                      regData.password.length > 0
+                        ? isRegPasswordStrong
+                          ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
+                          : 'border-amber-400 focus:ring-2 focus:ring-amber-400'
+                        : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
                     aria-label={showRegPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
                   >
                     {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                {/* Prevenção de CLS: Altura reservada */}
+                {/* Medidor e Checklist Dinâmica de Segurança */}
+                <PasswordStrengthMeter password={regData.password} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Confirmar Palavra-passe</label>
+                <div className="relative">
+                  <input
+                    type={showRegConfirmPassword ? 'text' : 'password'}
+                    required
+                    autoComplete="new-password"
+                    placeholder="Repita a palavra-passe criada"
+                    value={regConfirmPassword}
+                    onChange={(e) => setRegConfirmPassword(e.target.value)}
+                    className={`w-full p-3 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                      regConfirmPassword.length > 0
+                        ? doPasswordsMatch
+                          ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
+                          : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                        : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                    aria-label={showRegConfirmPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                  >
+                    {showRegConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
                 <div className="min-h-[20px] mt-1 flex items-center">
-                  {regData.password.length > 0 && regData.password.length < 6 ? (
-                    <p className="text-[11px] font-medium text-amber-600 animate-in fade-in duration-200">
-                      A palavra-passe deve ter pelo menos 6 caracteres.
-                    </p>
+                  {regConfirmPassword.length > 0 ? (
+                    doPasswordsMatch ? (
+                      <p className="text-[11px] font-bold text-emerald-600 flex items-center animate-in fade-in duration-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" />
+                        As palavras-passe coincidem
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-bold text-rose-600 flex items-center animate-in fade-in duration-200">
+                        <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                        As palavras-passe não coincidem
+                      </p>
+                    )
                   ) : (
-                    <span className="text-[10px] text-slate-400">Segurança da conta UCM</span>
+                    <span className="text-[10px] text-slate-400">Confirmação obrigatória para evitar erros</span>
                   )}
                 </div>
               </div>
@@ -819,11 +918,12 @@ export function LandingPage() {
               {/* Botão Squishy com Feedback de Carregamento Integrado Sem CLS */}
               <button
                 type="submit"
-                disabled={isSubmitting || !isRegEmailValid || regData.password.length < 6 || !regData.full_name.trim()}
-                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative cursor-pointer ${isSubmitting || !isRegEmailValid || regData.password.length < 6 || !regData.full_name.trim()
+                disabled={isSubmitting || !isRegFormValid}
+                className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative cursor-pointer ${
+                  isSubmitting || !isRegFormValid
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed active:scale-100'
                     : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20 hover:shadow-lg'
-                  }`}
+                }`}
               >
                 <span className={`flex items-center justify-center transition-opacity duration-200 ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
                   Registar Conta UCM

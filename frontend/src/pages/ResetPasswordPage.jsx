@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, Eye, EyeOff, CheckCircle2, ShieldCheck, Loader2, Lock } from 'lucide-react';
+import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, ShieldCheck, Loader2, Lock } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { PasswordStrengthMeter, checkPasswordStrength } from '../components/PasswordStrengthMeter';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -14,15 +15,15 @@ export function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isLengthValid = password.length >= 6;
+  const { isStrong: isPasswordStrong } = checkPasswordStrength(password);
   const doPasswordsMatch = password.length > 0 && password === confirmPassword;
-  const isFormValid = isLengthValid && doPasswordsMatch;
+  const isFormValid = isPasswordStrong && doPasswordsMatch;
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!isLengthValid) {
-      showToast('A palavra-passe deve ter pelo menos 6 caracteres.', 'warning');
+    if (!isPasswordStrong) {
+      showToast('A palavra-passe deve cumprir todos os 5 critérios de segurança.', 'warning');
       return;
     }
 
@@ -61,25 +62,25 @@ export function ResetPasswordPage() {
           Redefinir Palavra-passe
         </h1>
         <p className="text-xs text-slate-500 text-center mt-1 mb-6">
-          Defina uma nova palavra-passe segura para aceder à sua conta UCM.
+          Defina uma nova palavra-passe forte e segura para a sua conta institucional UCM.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Nova Palavra-passe
+              Nova Palavra-passe Forte
             </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoComplete="new-password"
-                placeholder="••••••••"
+                placeholder="Mínimo 8 caracteres (A-Z, a-z, 0-9, !@#$)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`w-full p-3.5 pr-11 border rounded-xl text-sm focus:outline-none min-h-[46px] ${
                   password.length > 0
-                    ? isLengthValid
+                    ? isPasswordStrong
                       ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
                       : 'border-amber-400 focus:ring-2 focus:ring-amber-400'
                     : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
@@ -88,16 +89,15 @@ export function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                aria-label={showPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {password.length > 0 && !isLengthValid && (
-              <p className="mt-1 text-[11px] font-bold text-amber-600">
-                Mínimo de 6 caracteres necessário.
-              </p>
-            )}
+
+            {/* Medidor e Checklist Dinâmica de Segurança */}
+            <PasswordStrengthMeter password={password} />
           </div>
 
           <div>
@@ -109,7 +109,7 @@ export function ResetPasswordPage() {
                 type={showConfirmPassword ? 'text' : 'password'}
                 required
                 autoComplete="new-password"
-                placeholder="••••••••"
+                placeholder="Repita a nova palavra-passe"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className={`w-full p-3.5 pr-11 border rounded-xl text-sm focus:outline-none min-h-[46px] ${
@@ -123,27 +123,40 @@ export function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                aria-label={showConfirmPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {confirmPassword.length > 0 && !doPasswordsMatch && (
-              <p className="mt-1 text-[11px] font-bold text-rose-600">
-                As palavras-passe não coincidem.
-              </p>
-            )}
+            <div className="min-h-[20px] mt-1 flex items-center">
+              {confirmPassword.length > 0 ? (
+                doPasswordsMatch ? (
+                  <p className="text-[11px] font-bold text-emerald-600 flex items-center animate-in fade-in duration-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1 shrink-0" />
+                    As palavras-passe coincidem
+                  </p>
+                ) : (
+                  <p className="text-[11px] font-bold text-rose-600 flex items-center animate-in fade-in duration-200">
+                    <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                    As palavras-passe não coincidem
+                  </p>
+                )
+              ) : (
+                <span className="text-[10px] text-slate-400">Confirmação obrigatória para prosseguir</span>
+              )}
+            </div>
           </div>
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex items-start space-x-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <span>Após atualizar a palavra-passe, poderá aceder imediatamente à plataforma com o seu e-mail UCM.</span>
+            <span>Após atualizar a palavra-passe, poderá aceder imediatamente à plataforma com o seu e-mail institucional UCM.</span>
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting || !isFormValid}
-            className={`w-full py-3.5 px-4 font-bold rounded-xl text-sm min-h-[48px] shadow-md transition-all flex items-center justify-center cursor-pointer ${
+            className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all flex items-center justify-center cursor-pointer ${
               isSubmitting || !isFormValid
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white'

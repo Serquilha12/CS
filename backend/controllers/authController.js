@@ -1,5 +1,10 @@
 const authService = require('../services/authService');
-const { registerSchema, loginSchema } = require('../utils/validators');
+const {
+  registerSchema,
+  loginSchema,
+  resetPasswordSchema,
+  updateProfileSchema
+} = require('../utils/validators');
 
 class AuthController {
   async register(req, res, next) {
@@ -86,8 +91,8 @@ class AuthController {
 
   async updateProfile(req, res, next) {
     try {
-      const { full_name, course, campus, phone_number } = req.body;
-      const updated = await authService.updateProfile(req.user.id, { full_name, course, campus, phone_number });
+      const validatedData = updateProfileSchema.parse(req.body);
+      const updated = await authService.updateProfile(req.user.id, validatedData);
       return res.status(200).json({ success: true, message: 'Perfil atualizado com sucesso!', data: updated });
     } catch (err) {
       next(err);
@@ -110,10 +115,7 @@ class AuthController {
 
   async resetPassword(req, res, next) {
     try {
-      const { password } = req.body;
-      if (!password || password.length < 6) {
-        return res.status(400).json({ success: false, error: 'A palavra-passe deve ter pelo menos 6 caracteres.' });
-      }
+      const { password } = resetPasswordSchema.parse(req.body);
       await authService.resetPassword(req.user.id, password);
       return res.status(200).json({
         success: true,

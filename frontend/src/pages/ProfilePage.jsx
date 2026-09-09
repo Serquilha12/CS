@@ -56,12 +56,35 @@ export function ProfilePage() {
     }
   }
 
+  const MOZ_PHONE_REGEX = /^(\+?258\s?)?8[2-7]\d{7}$/;
+
   async function handleSaveProfile(e) {
     e.preventDefault();
+
+    const cleanName = formData.full_name.trim();
+    const nameWords = cleanName.split(/\s+/).filter(Boolean);
+
+    if (nameWords.length < 2 || !/^[a-zA-ZÀ-ÿ\s'-]+$/.test(cleanName)) {
+      showToast('Por favor, introduza o seu nome completo (pelo menos Nome e Apelido).', 'warning');
+      return;
+    }
+
+    if (formData.phone_number) {
+      const sanitizedPhone = formData.phone_number.replace(/\s+/g, '');
+      if (!MOZ_PHONE_REGEX.test(sanitizedPhone)) {
+        showToast('Número de telefone inválido. Utilize formato moçambicano (+258 82/83/84/85/86/87...).', 'warning');
+        return;
+      }
+    }
+
     try {
       const res = await fetchApi('/auth/profile', {
         method: 'PUT',
-        body: formData
+        body: {
+          ...formData,
+          full_name: cleanName.replace(/\s+/g, ' '),
+          phone_number: formData.phone_number?.trim() || null
+        }
       });
       if (res.success) {
         showToast('Perfil atualizado com sucesso!', 'success');
@@ -128,10 +151,13 @@ export function ProfilePage() {
               <label className="block text-xs font-bold text-slate-600 mb-1">Nome Completo</label>
               <input
                 type="text"
+                required
+                placeholder="Ex: Ancha Jussa"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">Nome e apelido para identificação institucional</span>
             </div>
 
             <div>
@@ -148,7 +174,7 @@ export function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1">Telemóvel (Contacto)</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Telemóvel (Contacto em Moçambique)</label>
               <input
                 type="tel"
                 placeholder="+258 84 123 4567"
@@ -156,6 +182,7 @@ export function ProfilePage() {
                 onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                 className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"
               />
+              <span className="text-[10px] text-slate-400 mt-1 block">Ex: +258 84 123 4567 ou 841234567 (Tchumene/Vodacom/Tmcel/Movitel)</span>
             </div>
 
             <button

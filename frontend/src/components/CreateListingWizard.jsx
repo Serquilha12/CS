@@ -103,8 +103,23 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
 
   function nextStep() {
     if (step === 1) {
-      if (!formData.title.trim() || !formData.description.trim()) {
-        showToast('Preencha o título e a descrição para avançar.', 'warning');
+      const cleanTitle = formData.title.trim();
+      const cleanDesc = formData.description.trim();
+
+      if (cleanTitle.length < 3) {
+        showToast('O título do anúncio deve ter pelo menos 3 caracteres.', 'warning');
+        return;
+      }
+      if (cleanTitle.length > 100) {
+        showToast('O título não pode exceder 100 caracteres.', 'warning');
+        return;
+      }
+      if (cleanDesc.length < 10) {
+        showToast('A descrição deve ter pelo menos 10 caracteres explicativos.', 'warning');
+        return;
+      }
+      if (cleanDesc.length > 2000) {
+        showToast('A descrição não pode exceder 2000 caracteres.', 'warning');
         return;
       }
     }
@@ -125,9 +140,21 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
     }
 
     const isFree = formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo';
-    if (!isFree && (formData.price_mzn === '' || formData.price_mzn === undefined)) {
-      showToast('Indique o preço em Meticais (MZN).', 'warning');
-      return;
+    const parsedPrice = Number(formData.price_mzn);
+
+    if (!isFree) {
+      if (formData.price_mzn === '' || formData.price_mzn === undefined || isNaN(parsedPrice)) {
+        showToast('Indique um valor numérico válido para o preço em Meticais (MZN).', 'warning');
+        return;
+      }
+      if (parsedPrice < 0) {
+        showToast('O preço não pode ser negativo.', 'warning');
+        return;
+      }
+      if (parsedPrice > 250000) {
+        showToast('O preço máximo permitido é de 250.000 MZN.', 'warning');
+        return;
+      }
     }
 
     try {
@@ -135,7 +162,9 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
       setIsSubmitting(true);
       await onSubmit({
         ...formData,
-        price_mzn: isFree ? 0 : Number(formData.price_mzn) || 0,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        price_mzn: isFree ? 0 : parsedPrice,
         images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80']
       });
     } catch (err) {
@@ -280,31 +309,77 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-800 mb-1">
-                  Título do Artigo *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-extrabold text-slate-800">
+                    Título do Artigo *
+                  </label>
+                  <span className={`text-[10px] font-bold ${formData.title.length > 90 ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {formData.title.length}/100
+                  </span>
+                </div>
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   placeholder="Ex: Manual de Análise Matemática / Bata de Laboratório"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full p-3.5 border border-slate-300 rounded-2xl text-base sm:text-sm focus:ring-2 focus:ring-persian focus:outline-none min-h-[48px]"
+                  className={`w-full p-3.5 border rounded-2xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                    formData.title.length > 0
+                      ? formData.title.trim().length >= 3 && !/(.)\1{5,}/.test(formData.title)
+                        ? 'border-emerald-500 bg-emerald-50/10 focus:ring-2 focus:ring-emerald-500'
+                        : 'border-rose-400 bg-rose-50/20 focus:ring-2 focus:ring-rose-400'
+                      : 'border-slate-300 focus:ring-2 focus:ring-persian'
+                  }`}
                 />
+                <div className="min-h-[18px] mt-1 flex items-center">
+                  {formData.title.length > 0 && formData.title.trim().length < 3 ? (
+                    <span className="text-[11px] font-semibold text-rose-600 animate-in fade-in">
+                      O título deve ter pelo menos 3 caracteres
+                    </span>
+                  ) : formData.title.length > 0 && /(.)\1{5,}/.test(formData.title) ? (
+                    <span className="text-[11px] font-semibold text-rose-600 animate-in fade-in">
+                      Evite repetição excessiva de caracteres no título
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Seja claro e específico para facilitar a busca</span>
+                  )}
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-800 mb-1">
-                  Descrição Completa *
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-extrabold text-slate-800">
+                    Descrição Completa *
+                  </label>
+                  <span className={`text-[10px] font-bold ${formData.description.length > 1800 ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {formData.description.length}/2000
+                  </span>
+                </div>
                 <textarea
                   required
                   rows={3}
+                  maxLength={2000}
                   placeholder="Descreva o estado do material (páginas, conservação, etc.)..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-3.5 border border-slate-300 rounded-2xl text-base sm:text-sm focus:ring-2 focus:ring-persian focus:outline-none"
+                  className={`w-full p-3.5 border rounded-2xl text-base sm:text-sm focus:outline-none ${
+                    formData.description.length > 0
+                      ? formData.description.trim().length >= 10
+                        ? 'border-emerald-500 bg-emerald-50/10 focus:ring-2 focus:ring-emerald-500'
+                        : 'border-rose-400 bg-rose-50/20 focus:ring-2 focus:ring-rose-400'
+                      : 'border-slate-300 focus:ring-2 focus:ring-persian'
+                  }`}
                 />
+                <div className="min-h-[18px] mt-1 flex items-center">
+                  {formData.description.length > 0 && formData.description.trim().length < 10 ? (
+                    <span className="text-[11px] font-semibold text-rose-600 animate-in fade-in">
+                      A descrição precisa de pelo menos 10 caracteres explicativos
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Detalhes de conservação, edição e ano</span>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -352,9 +427,18 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-slate-800 mb-1">Preço em Meticais (MZN)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-extrabold text-slate-800">
+                    Preço em Meticais (MZN)
+                  </label>
+                  {formData.transaction_type !== 'doacao' && formData.transaction_type !== 'emprestimo' && (
+                    <span className="text-[10px] text-slate-400 font-semibold">Máx: 250.000 MZN</span>
+                  )}
+                </div>
                 <input
                   type="number"
+                  min={0}
+                  max={250000}
                   disabled={formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo'}
                   placeholder={formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo' ? '0 MZN (Grátis)' : 'Ex: 750'}
                   value={formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo' ? 0 : formData.price_mzn}
@@ -362,9 +446,22 @@ export function CreateListingWizard({ onSubmit, onCancel }) {
                   className={`w-full p-3.5 border rounded-2xl text-base sm:text-sm min-h-[48px] ${
                     formData.transaction_type === 'doacao' || formData.transaction_type === 'emprestimo'
                       ? 'bg-platinum text-carrot border-slate-300 cursor-not-allowed font-extrabold'
-                      : 'border-slate-300 focus:ring-2 focus:ring-persian focus:outline-none'
+                      : Number(formData.price_mzn) > 250000 || Number(formData.price_mzn) < 0
+                        ? 'border-rose-400 bg-rose-50/20 focus:ring-2 focus:ring-rose-400'
+                        : 'border-slate-300 focus:ring-2 focus:ring-persian focus:outline-none'
                   }`}
                 />
+                <div className="min-h-[18px] mt-1 flex items-center">
+                  {Number(formData.price_mzn) > 250000 ? (
+                    <span className="text-[11px] font-semibold text-rose-600 animate-in fade-in">
+                      O valor excede o limite razoável de 250.000 MZN
+                    </span>
+                  ) : Number(formData.price_mzn) < 0 ? (
+                    <span className="text-[11px] font-semibold text-rose-600 animate-in fade-in">
+                      O preço não pode ser negativo
+                    </span>
+                  ) : null}
+                </div>
               </div>
 
               <div>
