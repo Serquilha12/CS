@@ -129,7 +129,7 @@ export function Marketplace() {
 
   // Filtragem no cliente — rápida e sem loading
   const filteredListings = listings.filter((item) => {
-    if (['reserved', 'sold', 'removed', 'suspended'].includes(item.status)) return false;
+    if (['reserved', 'sold', 'completed', 'removed', 'suspended'].includes(item.status)) return false;
     if (selectedActionType && item.transaction_type !== selectedActionType) return false;
 
     if (selectedPriceRange) {
@@ -152,7 +152,7 @@ export function Marketplace() {
 
   // Filtragem identica para o draft (para o contador "Ver X Resultados")
   const draftFilteredCount = listings.filter((item) => {
-    if (['reserved', 'sold', 'removed', 'suspended'].includes(item.status)) return false;
+    if (['reserved', 'sold', 'completed', 'removed', 'suspended'].includes(item.status)) return false;
     if (draftActionType && item.transaction_type !== draftActionType) return false;
 
     if (draftPriceRange) {
@@ -488,7 +488,7 @@ export function Marketplace() {
           </div>
 
           {/* ─── LINHA DE ESTADO DOS FILTROS / LIMPAR ─── */}
-          {(hasAnyFilter || filteredListings.length !== listings.filter(i => !['reserved','sold','removed','suspended'].includes(i.status)).length) && (
+          {(hasAnyFilter || filteredListings.length !== listings.filter(i => !['reserved','sold','completed','removed','suspended'].includes(i.status)).length) && (
             <div className="flex items-center justify-between px-0.5">
               <p className="text-xs text-slate-500 font-medium">
                 {loading ? (

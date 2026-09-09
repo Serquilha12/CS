@@ -114,13 +114,32 @@ class ReservationService {
       reservation = fallbackRes;
     }
 
+    // Iniciar a conversa no chat com mensagem automática do comprador
+    try {
+      const chatText = initial_message && initial_message.trim().length > 0
+        ? `📍 Proposta de Reserva: Ponto de encontro proposto em "${basePayload.meeting_point}".\n\nMensagem: ${initial_message.trim()}`
+        : `📍 Olá! Gostaria de reservar este material. Ponto de encontro proposto: "${basePayload.meeting_point}".`;
+
+      await supabaseAdmin
+        .from('chat_messages')
+        .insert({
+          listing_id,
+          sender_id: buyerId,
+          receiver_id: listing.owner_id,
+          message_text: chatText,
+          is_read: false
+        });
+    } catch (chatErr) {
+      console.warn('[RESERVATION INITIAL CHAT WARNING]:', chatErr.message);
+    }
+
     return reservation;
   }
 
   async acceptReservation(sellerId, reservationId) {
     const { data: reservation } = await supabaseAdmin
       .from('reservations')
-      .select('*, listings:listing_id(status, deleted_at)')
+      .select('*, listings:listing_id(title, status, deleted_at)')
       .eq('id', reservationId)
       .single();
 
@@ -155,12 +174,40 @@ class ReservationService {
     }
 
     // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrência
-    await supabaseAdmin
+    const { data: cancelledCompetitors } = await supabaseAdmin
       .from('reservations')
       .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega' })
       .eq('listing_id', reservation.listing_id)
       .eq('status', 'pending')
-      .neq('id', reservationId);
+      .neq('id', reservationId)
+      .select('buyer_id');
+
+    // Notificar concorrentes bloqueados
+    if (cancelledCompetitors && cancelledCompetitors.length > 0) {
+      for (const comp of cancelledCompetitors) {
+        await supabaseAdmin.from('notifications').insert({
+          user_id: comp.buyer_id,
+          title: 'Artigo Reservado',
+          message: `O anúncio "${reservation.listings?.title || 'material'}" foi reservado por outro utilizador.`,
+          type: 'reservation_cancelled'
+        });
+      }
+    }
+
+    // Inserir mensagem de sistema no chat notificando ambos
+    try {
+      await supabaseAdmin
+        .from('chat_messages')
+        .insert({
+          listing_id: reservation.listing_id,
+          sender_id: sellerId,
+          receiver_id: reservation.buyer_id,
+          message_text: `✅ [SISTEMA]: Reserva aceite pelo vendedor! Ponto de encontro acordado: "${reservation.meeting_point || 'Biblioteca Central'}". Por favor, compareçam no horário combinado e cliquem na dupla confirmação após a entrega.`,
+          is_read: false
+        });
+    } catch (e) {
+      console.warn('[RESERVATION CHAT NOTICE WARNING]:', e.message);
+    }
 
     return fullUpdate;
   }
@@ -209,12 +256,46 @@ class ReservationService {
 
     if (error) throw new Error(error.message);
 
-    // Se ambas as partes confirmaram, fecha o anúncio como vendido
+    // Se ambas as partes confirmaram, fecha o anúncio como concluído e calcula poupança
     if (isDoubleConfirmed) {
       await supabaseAdmin
         .from('listings')
-        .update({ status: 'sold' })
+        .update({ status: 'completed', updated_at: new Date() })
         .eq('id', reservation.listing_id);
+
+      const savings = Number((Number(reservation.agreed_price_mzn || 0) * 0.35).toFixed(2));
+
+      // Atualizar perfil do comprador e estatísticas globais
+      try {
+        const { data: bProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('savings_mzn, completed_deals')
+          .eq('id', reservation.buyer_id)
+          .maybeSingle();
+
+        if (bProfile) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({
+              savings_mzn: Number((Number(bProfile.savings_mzn || 0) + savings).toFixed(2)),
+              completed_deals: (bProfile.completed_deals || 0) + 1
+            })
+            .eq('id', reservation.buyer_id);
+        }
+
+        // Mensagem de comemoração no chat
+        await supabaseAdmin
+          .from('chat_messages')
+          .insert({
+            listing_id: reservation.listing_id,
+            sender_id: userId,
+            receiver_id: userId === reservation.buyer_id ? reservation.seller_id : reservation.buyer_id,
+            message_text: `🎉 [SISTEMA]: Transação concluída com sucesso por ambas as partes! O ciclo da economia circular foi encerrado com integridade. Poupança estimada gerada: ${savings} MZN.`,
+            is_read: false
+          });
+      } catch (statErr) {
+        console.warn('[RESERVATION SAVINGS UPDATE WARNING]:', statErr.message);
+      }
     }
 
     return {
@@ -239,7 +320,8 @@ class ReservationService {
       .from('reservations')
       .update({
         status: 'cancelled',
-        cancellation_reason: cancellationReason || 'Cancelamento voluntário'
+        cancellation_reason: cancellationReason || 'Cancelamento voluntário',
+        updated_at: new Date()
       })
       .eq('id', reservationId)
       .select()
@@ -259,8 +341,24 @@ class ReservationService {
     // Reverter o anúncio para ativo no feed
     await supabaseAdmin
       .from('listings')
-      .update({ status: 'active' })
+      .update({ status: 'active', updated_at: new Date() })
       .eq('id', reservation.listing_id);
+
+    // Mensagem de aviso de cancelamento no chat
+    try {
+      const partnerId = userId === reservation.buyer_id ? reservation.seller_id : reservation.buyer_id;
+      await supabaseAdmin
+        .from('chat_messages')
+        .insert({
+          listing_id: reservation.listing_id,
+          sender_id: userId,
+          receiver_id: partnerId,
+          message_text: `ℹ️ [SISTEMA]: A reserva foi cancelada (${cancellationReason || 'Cancelamento voluntário'}). O artigo está novamente disponível no mercado.`,
+          is_read: false
+        });
+    } catch (e) {
+      console.warn('[RESERVATION CANCEL CHAT WARNING]:', e.message);
+    }
 
     return resUpdate.data;
   }

@@ -132,7 +132,8 @@ const reservationSchema = z.object({
   listing_id: z.string().uuid('ID de anúncio inválido'),
   seller_id: z.string().uuid().optional().nullable(),
   agreed_price_mzn: z.coerce.number().nonnegative().max(250000).optional().nullable(),
-  meeting_point: z.string().optional().nullable().default('Em frente a biblioteca')
+  meeting_point: z.string().optional().nullable().default('Biblioteca Central - UCM Pemba'),
+  initial_message: z.string().max(1000).optional().nullable()
 });
 
 module.exports = {
