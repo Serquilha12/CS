@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { fetchApi } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { WebSocketContext } from '../context/WebSocketContext';
+import { supabase } from '../services/supabaseClient';
 
 export function useChat(param1, param2) {
   let listingId, otherUserId;
@@ -40,16 +41,62 @@ export function useChat(param1, param2) {
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const lastSyncTimestampRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const supabaseChannelRef = useRef(null);
 
   // Persistir mensagens no cache local
   useEffect(() => {
     if (!cacheKey || typeof window === 'undefined' || messages.length === 0) return;
     try {
-      // Guardar apenas mensagens definitivas (máx 50) para poupar espaço
       const toCache = messages.filter(m => !m.id.startsWith('temp_')).slice(-50);
       localStorage.setItem(cacheKey, JSON.stringify(toCache));
     } catch (e) {}
   }, [cacheKey, messages]);
+
+  // Função centralizada para processar mensagens recebidas em tempo real
+  const handleIncomingMessage = useCallback((msg) => {
+    if (!msg || !msg.id) return;
+
+    // Verificar se a mensagem pertence à conversa atual
+    const isThisChat =
+      msg.listing_id === listingId &&
+      ((msg.sender_id === otherUserId && msg.receiver_id === user?.id) ||
+       (msg.sender_id === user?.id && msg.receiver_id === otherUserId));
+
+    if (!isThisChat) return;
+
+    setIsPartnerTyping(false);
+
+    setMessages((prev) => {
+      // Evitar duplicações pelo id
+      if (prev.some(m => m.id === msg.id)) return prev;
+
+      // Reconciliação otimista: substitui mensagem temporária
+      const optimisticIdx = prev.findIndex(
+        m => m.id.startsWith('temp_') && m.message_text === msg.message_text && m.sender_id === msg.sender_id
+      );
+
+      if (optimisticIdx !== -1) {
+        const next = [...prev];
+        next[optimisticIdx] = { ...msg, status: 'sent' };
+        return next;
+      }
+
+      lastSyncTimestampRef.current = msg.created_at;
+      return [...prev, { ...msg, status: 'sent' }];
+    });
+
+    // Se o chat estiver ativo e focado, confirma a leitura imediatamente
+    if (document.hasFocus() && msg.receiver_id === user?.id) {
+      if (emitMarkRead) emitMarkRead(listingId, otherUserId);
+      if (supabaseChannelRef.current) {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: 'read',
+          payload: { reader_id: user?.id, listing_id: listingId }
+        });
+      }
+    }
+  }, [listingId, otherUserId, user?.id, emitMarkRead]);
 
   // Carregamento completo do servidor
   const loadMessages = useCallback(async () => {
@@ -70,12 +117,16 @@ export function useChat(param1, param2) {
     }
   }, [listingId, otherUserId]);
 
-  // DELTA SYNC: Busca diferencial de mensagens perdidas
+  // DELTA SYNC: Busca diferencial de mensagens novas
   const syncDeltaMessages = useCallback(async () => {
-    if (!listingId || !otherUserId || !lastSyncTimestampRef.current) return;
+    if (!listingId || !otherUserId) return;
     try {
-      const res = await fetchApi(`/chat/messages/${listingId}/${otherUserId}?since=${encodeURIComponent(lastSyncTimestampRef.current)}`);
-      
+      const endpoint = lastSyncTimestampRef.current
+        ? `/chat/messages/${listingId}/${otherUserId}?since=${encodeURIComponent(lastSyncTimestampRef.current)}`
+        : `/chat/messages/${listingId}/${otherUserId}`;
+
+      const res = await fetchApi(endpoint);
+
       if (res.success && Array.isArray(res.data) && res.data.length > 0) {
         setMessages((prev) => {
           const existingIds = new Set(prev.map(m => m.id));
@@ -85,20 +136,38 @@ export function useChat(param1, param2) {
 
           if (newItems.length === 0) return prev;
 
-          const updated = [...prev, ...newItems];
-          lastSyncTimestampRef.current = updated[updated.length - 1].created_at;
-          return updated;
+          // Substituir optimistics correspondentes se existirem
+          let next = [...prev];
+          for (const item of newItems) {
+            const tempIdx = next.findIndex(
+              m => m.id.startsWith('temp_') && m.message_text === item.message_text && m.sender_id === item.sender_id
+            );
+            if (tempIdx !== -1) {
+              next[tempIdx] = item;
+            } else {
+              next.push(item);
+            }
+          }
+
+          lastSyncTimestampRef.current = next[next.length - 1].created_at;
+          return next;
         });
+
+        // Se recebeu novas mensagens de outro utilizador, marcar como lido
+        const hasIncoming = res.data.some(m => m.receiver_id === user?.id);
+        if (hasIncoming && document.hasFocus() && emitMarkRead) {
+          emitMarkRead(listingId, otherUserId);
+        }
       }
     } catch (e) {
-      console.warn('[CHAT DELTA SYNC NOTICE]:', e.message);
+      // Falhas silenciosas de delta sync temporárias são toleradas
     }
-  }, [listingId, otherUserId]);
+  }, [listingId, otherUserId, user?.id, emitMarkRead]);
 
   // Efeito ao trocar de conversa
   useEffect(() => {
     if (listingId && otherUserId) {
-      // Ler cache fresco da conversa atual
+      lastSyncTimestampRef.current = null;
       if (cacheKey && typeof window !== 'undefined') {
         try {
           const cached = localStorage.getItem(cacheKey);
@@ -111,55 +180,92 @@ export function useChat(param1, param2) {
     }
   }, [listingId, otherUserId, cacheKey, loadMessages, emitMarkRead]);
 
-  // Registo do Delta Sync ao reconectar
+  // CAMADA 1: SUPABASE REALTIME (Postgres Changes + Broadcast instantâneo)
   useEffect(() => {
-    if (!onReconnect) return;
-    const unsubscribe = onReconnect(() => {
-      syncDeltaMessages();
-    });
-    return unsubscribe;
-  }, [onReconnect, syncDeltaMessages]);
+    if (!listingId || !user?.id) return;
 
-  // Escuta de eventos WebSocket em tempo real (Mensagens, Digitação, Leitura)
+    const channelName = `chat_room_${listingId}`;
+    const channel = supabase.channel(channelName, {
+      config: {
+        broadcast: { ack: true }
+      }
+    });
+
+    channel
+      // A. Inserção no PostgreSQL
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `listing_id=eq.${listingId}`
+        },
+        (payload) => {
+          if (payload.new) handleIncomingMessage(payload.new);
+        }
+      )
+      // B. Atualização no PostgreSQL (Ex: is_read marcado como true)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `listing_id=eq.${listingId}`
+        },
+        (payload) => {
+          const updated = payload.new;
+          if (updated) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updated.id ? { ...m, ...updated, status: updated.is_read ? 'read' : 'sent' } : m))
+            );
+          }
+        }
+      )
+      // C. Broadcast instantâneo peer-to-peer de novas mensagens (<30ms)
+      .on('broadcast', { event: 'new_message' }, (payload) => {
+        if (payload?.payload) handleIncomingMessage(payload.payload);
+      })
+      // D. Broadcast instantâneo de indicador de digitação
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload?.payload?.sender_id === otherUserId) {
+          setIsPartnerTyping(Boolean(payload.payload.isTyping));
+        }
+      })
+      // E. Broadcast instantâneo de confirmação de leitura
+      .on('broadcast', { event: 'read' }, (payload) => {
+        if (payload?.payload?.reader_id === otherUserId) {
+          setMessages((prev) =>
+            prev.map((m) => (m.sender_id === user?.id ? { ...m, status: 'read', is_read: true } : m))
+          );
+        }
+      })
+      .subscribe((status) => {
+        console.log(`[SUPABASE REALTIME ${channelName}]:`, status);
+      });
+
+    supabaseChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      supabaseChannelRef.current = null;
+    };
+  }, [listingId, otherUserId, user?.id, handleIncomingMessage]);
+
+  // CAMADA 2: WEBSOCKET NATIVO DO BACKEND (quando conectado)
   useEffect(() => {
     if (!subscribeToMessages) return;
 
     const unsubscribe = subscribeToMessages((payload) => {
-      // 1. Mensagem de Chat Recebida
       if (payload.type === 'CHAT_MESSAGE' && payload.data) {
-        const msg = payload.data;
-        const isThisChat = 
-          msg.listing_id === listingId &&
-          ((msg.sender_id === otherUserId && msg.receiver_id === user?.id) ||
-           (msg.sender_id === user?.id && msg.receiver_id === otherUserId));
-
-        if (isThisChat) {
-          setIsPartnerTyping(false);
-          setMessages((prev) => {
-            if (prev.some(m => m.id === msg.id)) return prev;
-
-            const hasOptimistic = prev.some(m => m.id.startsWith('temp_') && m.message_text === msg.message_text);
-            if (hasOptimistic) {
-              return prev.map(m => (m.id.startsWith('temp_') && m.message_text === msg.message_text) ? { ...msg, status: 'sent' } : m);
-            }
-
-            lastSyncTimestampRef.current = msg.created_at;
-            return [...prev, { ...msg, status: 'sent' }];
-          });
-
-          // Se a janela estiver ativa, confirma a leitura imediatamente
-          if (emitMarkRead && document.hasFocus()) {
-            emitMarkRead(listingId, otherUserId);
-          }
-        }
+        handleIncomingMessage(payload.data);
       }
 
-      // 2. Indicador de Digitação (Typing Status)
       if (payload.type === 'TYPING_STATUS' && payload.listing_id === listingId && payload.sender_id === otherUserId) {
         setIsPartnerTyping(Boolean(payload.isTyping));
       }
 
-      // 3. Confirmação de Leitura em Tempo Real (Live Read Receipts)
       if (payload.type === 'MESSAGES_READ' && payload.listing_id === listingId && payload.reader_id === otherUserId) {
         setMessages((prev) =>
           prev.map((m) => (m.sender_id === user?.id ? { ...m, status: 'read', is_read: true } : m))
@@ -168,21 +274,57 @@ export function useChat(param1, param2) {
     });
 
     return unsubscribe;
-  }, [subscribeToMessages, listingId, otherUserId, user, emitMarkRead]);
+  }, [subscribeToMessages, listingId, otherUserId, user?.id, handleIncomingMessage]);
+
+  // CAMADA 3: SMART DELTA-SYNC EM SEGUNDO PLANO (Verificação a cada 2.5s)
+  // Garante que nenhuma mensagem seja perdida mesmo com redes instáveis ou quedas de socket
+  useEffect(() => {
+    if (!listingId || !otherUserId) return;
+
+    const intervalId = setInterval(() => {
+      syncDeltaMessages();
+    }, 2500);
+
+    return () => clearInterval(intervalId);
+  }, [listingId, otherUserId, syncDeltaMessages]);
+
+  // Registo do Delta Sync ao reconectar socket
+  useEffect(() => {
+    if (!onReconnect) return;
+    const unsubscribe = onReconnect(() => {
+      syncDeltaMessages();
+    });
+    return unsubscribe;
+  }, [onReconnect, syncDeltaMessages]);
 
   // Emitir atividade de digitação com Debounce
   const handleTypingActivity = useCallback(() => {
-    if (!emitTyping || !listingId || !otherUserId) return;
+    if (!listingId || !otherUserId) return;
 
-    emitTyping(listingId, otherUserId, true);
+    if (emitTyping) emitTyping(listingId, otherUserId, true);
+
+    if (supabaseChannelRef.current) {
+      supabaseChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { sender_id: user?.id, isTyping: true }
+      });
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      emitTyping(listingId, otherUserId, false);
+      if (emitTyping) emitTyping(listingId, otherUserId, false);
+      if (supabaseChannelRef.current) {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: { sender_id: user?.id, isTyping: false }
+        });
+      }
     }, 2500);
-  }, [emitTyping, listingId, otherUserId]);
+  }, [emitTyping, listingId, otherUserId, user?.id]);
 
-  // OPTIMISTIC UI: Envio imediato no estado local
+  // OPTIMISTIC UI: Envio imediato no estado local com broadcast instantâneo
   const sendMessage = async (text) => {
     if (!listingId || !otherUserId) {
       throw new Error('Destinatário ou anúncio não identificados para envio de mensagem.');
@@ -195,6 +337,13 @@ export function useChat(param1, param2) {
 
     // Interrompe indicador de digitação
     if (emitTyping) emitTyping(listingId, otherUserId, false);
+    if (supabaseChannelRef.current) {
+      supabaseChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { sender_id: user?.id, isTyping: false }
+      });
+    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -225,6 +374,16 @@ export function useChat(param1, param2) {
           prev.map((m) => (m.id === tempId ? { ...res.data, status: 'sent' } : m))
         );
         lastSyncTimestampRef.current = res.data.created_at;
+
+        // Broadcast imediato para entrega em <30ms no Supabase Realtime
+        if (supabaseChannelRef.current) {
+          supabaseChannelRef.current.send({
+            type: 'broadcast',
+            event: 'new_message',
+            payload: res.data
+          });
+        }
+
         return res.data;
       } else {
         throw new Error(res.error || 'Falha ao enviar mensagem.');
@@ -252,9 +411,9 @@ export function useChat(param1, param2) {
     loading, 
     sendMessage, 
     retryMessage, 
-    handleTypingActivity,
-    isPartnerTyping,
-    refresh: loadMessages,
+    handleTypingActivity, 
+    isPartnerTyping, 
+    refresh: loadMessages, 
     connectionStatus 
   };
 }

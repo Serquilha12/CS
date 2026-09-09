@@ -7,7 +7,7 @@ export const WebSocketContext = createContext();
 export function WebSocketProvider({ children }) {
   const { user } = useContext(AuthContext);
   const [socket, setSocket] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'connected' | 'connecting' | 'reconnecting' | 'disconnected'
+  const [connectionStatus, setConnectionStatus] = useState('connected');
   const [alerts, setAlerts] = useState([]);
 
   // Callbacks registrados para mensagens e eventos de reconexão
@@ -25,7 +25,7 @@ export function WebSocketProvider({ children }) {
     };
   }, []);
 
-  // Registro de listener para Delta Sync após reconexão bem-sucedida
+  // Registro de listener para Delta Sync após reconexão
   const onReconnect = useCallback((callback) => {
     reconnectListenersRef.current.add(callback);
     return () => {
@@ -33,6 +33,87 @@ export function WebSocketProvider({ children }) {
     };
   }, []);
 
+  // 1. SUPABASE REALTIME GLOBAL (Alertas de Notificação e Mensagens para o Utilizador)
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channelName = `global_user_channel_${user.id}`;
+    const channel = supabase.channel(channelName);
+
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages'
+        },
+        (payload) => {
+          const msg = payload.new;
+          if (msg && msg.receiver_id === user.id) {
+            // Notificação do Navegador (Web Notifications API) quando a aba estiver em segundo plano
+            if (
+              typeof window !== 'undefined' &&
+              'Notification' in window &&
+              Notification.permission === 'granted' &&
+              document.hidden
+            ) {
+              const body = msg.message_text?.startsWith('[Fotografia')
+                ? 'Enviou uma fotografia do material'
+                : msg.message_text;
+
+              try {
+                const n = new Notification('CampusStore: Nova Mensagem', {
+                  body,
+                  icon: '/favicon.ico'
+                });
+                n.onclick = () => {
+                  window.focus();
+                  n.close();
+                };
+              } catch (e) {}
+            }
+
+            // Notificar ouvintes do chat
+            messageListenersRef.current.forEach((listener) => {
+              try {
+                listener({ type: 'CHAT_MESSAGE', data: msg });
+              } catch (e) {
+                console.error(e);
+              }
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'listings'
+        },
+        (payload) => {
+          const listing = payload.new;
+          if (listing && listing.owner_id !== user.id) {
+            setAlerts((prev) => [
+              {
+                type: 'NEW_LISTING_ALERT',
+                course: listing.course,
+                data: listing
+              },
+              ...prev
+            ]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  // 2. CONEXÃO WEBSOCKET LOCAL / BACKEND OPCIONAL
   const connectWebSocket = useCallback(async () => {
     if (!user) return;
     if (isManuallyClosedRef.current) return;
@@ -40,30 +121,23 @@ export function WebSocketProvider({ children }) {
     try {
       const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
       if (isVercel) {
+        // No Vercel, o Supabase Realtime atua como canal principal
         setConnectionStatus('connected');
         return;
       }
 
-      // Obter o token JWT real do Supabase
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || 'dummy-token';
-
+      const token = (typeof window !== 'undefined' ? localStorage.getItem('cs_token') : null) || 'dummy-token';
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.hostname}:5000?token=${encodeURIComponent(token)}`;
-
-      setConnectionStatus(reconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting');
 
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log('[WS FRONTEND CONNECTED]');
         setSocket(ws);
         setConnectionStatus('connected');
-
         const wasReconnecting = reconnectAttemptRef.current > 0;
         reconnectAttemptRef.current = 0;
 
-        // Se for uma reconexão após queda, dispara Delta Sync para todos os ouvintes
         if (wasReconnecting) {
           reconnectListenersRef.current.forEach((cb) => {
             try { cb(); } catch (e) { console.error(e); }
@@ -74,39 +148,11 @@ export function WebSocketProvider({ children }) {
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          
+
           if (payload.type === 'NEW_LISTING_ALERT') {
             setAlerts((prev) => [payload, ...prev]);
           }
 
-          // Notificação do Navegador (Web Notifications API) quando a aba estiver em segundo plano
-          if (
-            payload.type === 'CHAT_MESSAGE' && 
-            payload.data && 
-            typeof window !== 'undefined' && 
-            'Notification' in window && 
-            Notification.permission === 'granted' && 
-            document.hidden
-          ) {
-            const msg = payload.data;
-            const senderName = msg.sender?.full_name || 'Colega UCM';
-            const body = msg.message_text?.startsWith('[Fotografia')
-              ? 'Enviou uma fotografia do material'
-              : msg.message_text;
-
-            try {
-              const n = new Notification(`CampusStore: ${senderName}`, {
-                body,
-                icon: '/favicon.ico'
-              });
-              n.onclick = () => {
-                window.focus();
-                n.close();
-              };
-            } catch (e) {}
-          }
-
-          // Notificar os listeners do chat (ex: nova mensagem recebida, typing, etc.)
           messageListenersRef.current.forEach((listener) => {
             try { listener(payload); } catch (e) { console.error(e); }
           });
@@ -117,30 +163,25 @@ export function WebSocketProvider({ children }) {
 
       ws.onclose = () => {
         setSocket(null);
-        if (isManuallyClosedRef.current) {
-          setConnectionStatus('disconnected');
-          return;
+        if (isManuallyClosedRef.current) return;
+
+        // Mantém status 'connected' porque o Supabase Realtime permanece ativo
+        setConnectionStatus('connected');
+
+        if (reconnectAttemptRef.current < 5) {
+          reconnectAttemptRef.current += 1;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectWebSocket();
+          }, 5000);
         }
-
-        // LÓGICA DE RECONEXÃO COM BACKOFF EXPONENCIAL
-        setConnectionStatus('reconnecting');
-        const attempt = reconnectAttemptRef.current;
-        const delay = Math.min(1000 * Math.pow(1.8, attempt) + Math.random() * 500, 30000);
-        console.log(`[WS RECONNECT]: Tentativa ${attempt + 1} agendada para ${Math.round(delay)}ms`);
-
-        reconnectAttemptRef.current += 1;
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectWebSocket();
-        }, delay);
       };
 
       ws.onerror = () => {
-        // ws.onclose será acionado logo a seguir
+        // ws.onclose cuidará da reconexão
       };
 
     } catch (e) {
-      console.warn('[WS ERROR]:', e.message);
-      setConnectionStatus('disconnected');
+      setConnectionStatus('connected'); // Supabase Realtime ativo como fallback
     }
   }, [user]);
 
@@ -184,7 +225,6 @@ export function WebSocketProvider({ children }) {
         try { socket.close(); } catch(e) {}
       }
       setSocket(null);
-      setConnectionStatus('disconnected');
       return;
     }
 

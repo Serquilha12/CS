@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
-const { supabase } = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 
 class SocketManager {
   constructor() {
@@ -25,13 +26,31 @@ class SocketManager {
 
         let authenticatedUser = null;
 
-        // 1. Validação estrita do token JWT do Supabase no handshake
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (!error && user) {
-          authenticatedUser = user;
-        } else if (token === 'dummy-token' && process.env.NODE_ENV !== 'production') {
-          // Fallback de desenvolvimento local seguro
-          const { data: fallbackProfile } = await supabase
+        // 1. Tentar validação via Supabase Auth
+        try {
+          const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+          if (!error && user) {
+            authenticatedUser = user;
+          }
+        } catch (e) {}
+
+        // 2. Se falhar, tentar validação de token JWT interno (gerado por authService)
+        if (!authenticatedUser) {
+          try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026');
+            if (decoded) {
+              authenticatedUser = {
+                id: decoded.id,
+                email: decoded.email,
+                user_metadata: { course: decoded.course, full_name: decoded.full_name }
+              };
+            }
+          } catch (jwtErr) {}
+        }
+
+        // 3. Fallback de desenvolvimento se token for dummy-token
+        if (!authenticatedUser && token === 'dummy-token' && process.env.NODE_ENV !== 'production') {
+          const { data: fallbackProfile } = await supabaseAdmin
             .from('profiles')
             .select('id, email, course, full_name')
             .limit(1)

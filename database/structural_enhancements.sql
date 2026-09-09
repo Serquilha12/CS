@@ -256,3 +256,25 @@ EXCEPTION
         RAISE NOTICE 'Extensão pg_cron não está ativa neste ambiente. O serviço Node.js atuará como agendador contínuo.';
 END;
 $$;
+
+-- ----------------------------------------------------------------------------
+-- 7. HABILITAÇÃO NATIVA DO SUPABASE REALTIME NA TABELA chat_messages
+-- ----------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_publication_tables 
+            WHERE pubname = 'supabase_realtime' AND tablename = 'chat_messages'
+        ) THEN
+            ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+        END IF;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Publicação supabase_realtime já inclui chat_messages ou requer privilégios de superuser.';
+END;
+$$;
+
+ALTER TABLE IF EXISTS public.chat_messages REPLICA IDENTITY FULL;
+
