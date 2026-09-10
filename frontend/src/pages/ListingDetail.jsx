@@ -214,11 +214,15 @@ export function ListingDetail() {
         <span className="absolute top-3 left-3 px-3 py-1 bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold rounded-xl uppercase">
           {listing.transaction_type}
         </span>
-        {listing.status === 'negotiating' && (
+        {listing.status === 'reserved' ? (
+          <span className="absolute top-3 right-3 px-3 py-1 bg-persian text-white text-xs font-bold rounded-xl shadow-sm">
+            Reservado / Encontro Marcado
+          </span>
+        ) : listing.status === 'negotiating' ? (
           <span className="absolute top-3 right-3 px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-xl shadow-sm">
             Negociação em Curso
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Detalhes do Artigo */}
@@ -424,9 +428,9 @@ export function ListingDetail() {
                 />
               </div>
 
-              {/* Aviso de Concorrência & Segurança */}
-              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-[11px] text-amber-900 leading-relaxed">
-                🛡️ <strong>Regra de Equidade:</strong> O registo inicial bloqueia o artigo atomicamente na base de dados para evitar reservas simultâneas (concorrência). A transação definitiva só é selada após a dupla confirmação presencial no campus.
+              {/* Aviso de Mercado Livre & Segurança */}
+              <div className="p-3 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-[11px] text-blue-950 leading-relaxed">
+                🛡️ <strong>Mercado Livre & Dinâmica de Campus:</strong> Vários colegas podem demonstrar interesse e negociar em simultâneo. O artigo permanece disponível até que o anunciante decida aceitar a oferta de um aluno e fechar a reserva com exclusividade para o encontro presencial.
               </div>
 
               {/* Botões do Formulário */}

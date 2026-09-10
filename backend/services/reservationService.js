@@ -1,39 +1,8 @@
 const { supabaseAdmin } = require('../config/supabase');
 
 class ReservationService {
-  async createReservation(buyerId, { listing_id, agreed_price_mzn, meeting_point }) {
-    // 1. Tentar execução atómica transacional com bloqueio pessimista (SELECT ... FOR UPDATE via RPC)
-    try {
-      const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('reserve_listing_atomic', {
-        p_listing_id: listing_id,
-        p_buyer_id: buyerId,
-        p_agreed_price: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : null,
-        p_meeting_point: meeting_point || null
-      });
-
-      if (!rpcErr && rpcRes) {
-        // Enriquecer os relacionamentos com listings e perfis
-        const { data: fullReservation } = await supabaseAdmin
-          .from('reservations')
-          .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
-          .eq('id', rpcRes.id)
-          .single();
-
-        return fullReservation || rpcRes;
-      }
-
-      // Se o erro foi gerado intencionalmente pela procedure (ex: item já reservado ou próprio anúncio)
-      if (rpcErr && (rpcErr.message?.includes('Concorrência') || rpcErr.message?.includes('próprio anúncio') || rpcErr.message?.includes('não se encontra disponível'))) {
-        throw new Error(rpcErr.message);
-      }
-    } catch (e) {
-      if (!e.message?.includes('reserve_listing_atomic') && !e.code?.includes('PGRST202') && e.code !== '42883') {
-        throw e;
-      }
-      // Se a procedure ainda não foi criada no banco, procede com o fallback atómico no Node.js
-    }
-
-    // 2. Fallback de Alta Concorrência: Bloqueio Otimista Condicional no Express
+  async createReservation(buyerId, { listing_id, agreed_price_mzn, meeting_point, initial_message }) {
+    // 1. Verificar o anúncio
     const { data: listing, error: listErr } = await supabaseAdmin
       .from('listings')
       .select('*')
@@ -43,14 +12,14 @@ class ReservationService {
 
     if (listErr || !listing) throw new Error('Anúncio não encontrado ou já foi removido.');
     if (listing.owner_id === buyerId) throw new Error('Não pode reservar o seu próprio anúncio.');
-    if (['reserved', 'sold', 'removed', 'suspended'].includes(listing.status)) {
-      throw new Error('Este anúncio já não se encontra disponível para reserva.');
+    if (['sold', 'completed', 'removed', 'suspended'].includes(listing.status)) {
+      throw new Error('Este anúncio já foi concluído ou não se encontra disponível.');
     }
 
-    // Verificar se o comprador já tem uma reserva ativa (pending ou accepted) para este anúncio
+    // 2. Verificar se este comprador já tem uma reserva ativa (pending ou accepted) para este anúncio
     const { data: existingReservation } = await supabaseAdmin
       .from('reservations')
-      .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+      .select('*, listings:listing_id(title, images, price_mzn, campus_location, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
       .eq('listing_id', listing_id)
       .eq('buyer_id', buyerId)
       .in('status', ['pending', 'accepted'])
@@ -62,63 +31,38 @@ class ReservationService {
       return existingReservation;
     }
 
-    // Atomicidade: Altera status para 'negotiating' apenas se ainda for 'active'
-    const { data: lockedListing, error: lockErr } = await supabaseAdmin
-      .from('listings')
-      .update({ status: 'negotiating', updated_at: new Date() })
-      .eq('id', listing_id)
-      .eq('status', 'active')
-      .is('deleted_at', null)
-      .select('id, owner_id, price_mzn, campus_location')
-      .maybeSingle();
-
-    if (lockErr || !lockedListing) {
-      throw new Error('Este anúncio acabou de ser reservado ou já não se encontra disponível para nova negociação.');
-    }
-
-    // Criar a reserva garantindo atomicidade
+    // 3. Criar a proposta de reserva para este interessado SEM alterar o status do anúncio
+    // O anúncio PERMANECE 'active', permitindo concorrência saudável e múltiplos interessados
     const basePayload = {
       listing_id,
       buyer_id: buyerId,
       seller_id: listing.owner_id,
       agreed_price_mzn: agreed_price_mzn !== undefined && agreed_price_mzn !== null ? Number(agreed_price_mzn) : listing.price_mzn,
       meeting_point: meeting_point || listing.campus_location || 'Biblioteca Central - UCM Pemba',
-      status: 'pending'
+      status: 'pending',
+      buyer_confirmed: false,
+      seller_confirmed: false
     };
 
     let reservation = null;
-    const { data: fullRes, error: fullErr } = await supabaseAdmin
+    const { data: createdRes, error: insertErr } = await supabaseAdmin
       .from('reservations')
-      .insert({
-        ...basePayload,
-        buyer_confirmed: false,
-        seller_confirmed: false
-      })
-      .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+      .insert(basePayload)
+      .select('*, listings:listing_id(title, images, price_mzn, campus_location, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
       .single();
 
-    if (!fullErr && fullRes) {
-      reservation = fullRes;
-    } else {
-      const { data: fallbackRes, error: fallbackErr } = await supabaseAdmin
-        .from('reservations')
-        .insert(basePayload)
-        .select('*, listings:listing_id(title, images), buyer:buyer_id(full_name), seller:seller_id(full_name)')
-        .single();
-
-      if (fallbackErr) {
-        // Reverter status do anúncio caso a inserção falhe
-        await supabaseAdmin.from('listings').update({ status: 'active' }).eq('id', listing_id);
-        throw new Error(fallbackErr.message);
-      }
-      reservation = fallbackRes;
+    if (insertErr) {
+      console.error('[RESERVATION INSERT ERROR]:', insertErr);
+      throw new Error('Não foi possível iniciar a negociação deste artigo.');
     }
 
-    // Iniciar a conversa no chat com mensagem automática do comprador
+    reservation = createdRes;
+
+    // 4. Iniciar o chat com a mensagem do comprador
     try {
       const chatText = initial_message && initial_message.trim().length > 0
-        ? `📍 Proposta de Reserva: Ponto de encontro proposto em "${basePayload.meeting_point}".\n\nMensagem: ${initial_message.trim()}`
-        : `📍 Olá! Gostaria de reservar este material. Ponto de encontro proposto: "${basePayload.meeting_point}".`;
+        ? `📍 Proposta de Reserva: Ponto de encontro sugerido em "${basePayload.meeting_point}".\n\nMensagem: ${initial_message.trim()}`
+        : `📍 Olá! Tenho interesse em ficar com este material. Sugiro encontrarmo-nos em "${basePayload.meeting_point}".`;
 
       await supabaseAdmin
         .from('chat_messages')
@@ -169,32 +113,11 @@ class ReservationService {
 
     if (updateErr || !fullUpdate) {
       // Reverter se falhar
-      await supabaseAdmin.from('listings').update({ status: 'negotiating' }).eq('id', reservation.listing_id);
+      await supabaseAdmin.from('listings').update({ status: 'active' }).eq('id', reservation.listing_id);
       throw new Error(updateErr ? updateErr.message : 'Erro ao atualizar estado da reserva.');
     }
 
-    // Cancelar automaticamente quaisquer outros pedidos pendentes em concorrência
-    const { data: cancelledCompetitors } = await supabaseAdmin
-      .from('reservations')
-      .update({ status: 'cancelled', cancellation_reason: 'Item reservado por outro colega' })
-      .eq('listing_id', reservation.listing_id)
-      .eq('status', 'pending')
-      .neq('id', reservationId)
-      .select('buyer_id');
-
-    // Notificar concorrentes bloqueados
-    if (cancelledCompetitors && cancelledCompetitors.length > 0) {
-      for (const comp of cancelledCompetitors) {
-        await supabaseAdmin.from('notifications').insert({
-          user_id: comp.buyer_id,
-          title: 'Artigo Reservado',
-          message: `O anúncio "${reservation.listings?.title || 'material'}" foi reservado por outro utilizador.`,
-          type: 'reservation_cancelled'
-        });
-      }
-    }
-
-    // Inserir mensagem de sistema no chat notificando ambos
+    // Inserir mensagem de sistema no chat notificando o acordo
     try {
       await supabaseAdmin
         .from('chat_messages')
@@ -202,7 +125,7 @@ class ReservationService {
           listing_id: reservation.listing_id,
           sender_id: sellerId,
           receiver_id: reservation.buyer_id,
-          message_text: `✅ [SISTEMA]: Reserva aceite pelo vendedor! Ponto de encontro acordado: "${reservation.meeting_point || 'Biblioteca Central'}". Por favor, compareçam no horário combinado e cliquem na dupla confirmação após a entrega.`,
+          message_text: `✅ [SISTEMA]: Reserva aceite pelo vendedor! Ponto de encontro acordado: "${reservation.meeting_point || 'Biblioteca Central'}". Por favor, compareçam no horário combinado e cliquem na confirmação após a entrega.`,
           is_read: false
         });
     } catch (e) {
@@ -436,6 +359,80 @@ class ReservationService {
 
     if (error) return null;
     return data;
+  }
+
+  async getReservationContext(listingId, currentUserId, partnerId) {
+    await this.processTimeouts();
+
+    // 1. Obter o anúncio com seus dados completos
+    const { data: listing, error: listErr } = await supabaseAdmin
+      .from('listings')
+      .select('id, title, price_mzn, transaction_type, status, owner_id, images, campus_location, description, condition, course, category')
+      .eq('id', listingId)
+      .is('deleted_at', null)
+      .single();
+
+    if (listErr || !listing) {
+      return {
+        listing: null,
+        reservation: null,
+        isAcceptedForThisChat: false,
+        isReservedByOther: false,
+        reservedBuyerName: null
+      };
+    }
+
+    const isSeller = listing.owner_id === currentUserId;
+    const currentBuyerId = isSeller ? partnerId : currentUserId;
+
+    // 2. Verificar se existe uma reserva 'accepted' ativa no anúncio
+    const { data: acceptedReservation } = await supabaseAdmin
+      .from('reservations')
+      .select('*, listings:listing_id(title, images, price_mzn, campus_location, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+      .eq('listing_id', listingId)
+      .eq('status', 'accepted')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Buscar perfil do interlocutor (partner) para enriquecer o contexto do chat
+    const { data: partnerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name, avatar_url, course')
+      .eq('id', partnerId)
+      .maybeSingle();
+
+    if (acceptedReservation) {
+      const isAcceptedForThisChat = acceptedReservation.buyer_id === currentBuyerId;
+      return {
+        listing,
+        partner: partnerProfile || null,
+        reservation: isAcceptedForThisChat ? acceptedReservation : null,
+        isAcceptedForThisChat,
+        isReservedByOther: !isAcceptedForThisChat,
+        reservedBuyerName: !isAcceptedForThisChat ? (acceptedReservation.buyer?.full_name || 'outro colega') : null
+      };
+    }
+
+    // 3. Se não houver reserva aceita, buscar a proposta 'pending' deste aluno específico
+    const { data: pendingReservation } = await supabaseAdmin
+      .from('reservations')
+      .select('*, listings:listing_id(title, images, price_mzn, campus_location, status), buyer:buyer_id(full_name), seller:seller_id(full_name)')
+      .eq('listing_id', listingId)
+      .eq('buyer_id', currentBuyerId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      listing,
+      partner: partnerProfile || null,
+      reservation: pendingReservation || null,
+      isAcceptedForThisChat: false,
+      isReservedByOther: ['reserved', 'sold', 'completed'].includes(listing.status),
+      reservedBuyerName: null
+    };
   }
 }
 

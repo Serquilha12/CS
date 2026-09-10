@@ -8,5 +8,6 @@ router.put('/:id/accept', authMiddleware, reservationController.accept);
 router.put('/:id/confirm', authMiddleware, reservationController.confirm);
 router.put('/:id/cancel', authMiddleware, reservationController.cancel);
 router.get('/listing/:listingId', authMiddleware, reservationController.getByListing);
+router.get('/context/:listingId/:partnerId', authMiddleware, reservationController.getContext);
 
 module.exports = router;

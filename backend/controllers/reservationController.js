@@ -73,6 +73,19 @@ class ReservationController {
       next(err);
     }
   }
+
+  async getContext(req, res, next) {
+    try {
+      const { listingId, partnerId } = req.params;
+      const context = await reservationService.getReservationContext(listingId, req.user.id, partnerId);
+      return res.status(200).json({
+        success: true,
+        data: context
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ReservationController();
