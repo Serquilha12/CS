@@ -66,7 +66,40 @@ export async function fetchApi(endpoint, options = {}) {
         window.dispatchEvent(new CustomEvent('cs-session-expired'));
       }
     }
-    throw new Error(data.error || 'Erro ao comunicar com o servidor.');
+
+    let extractedError = '';
+
+    if (data) {
+      if (typeof data.error === 'string' && data.error.trim()) {
+        extractedError = data.error.trim();
+      } else if (data.error && typeof data.error === 'object') {
+        extractedError = data.error.message || (Array.isArray(data.details) ? data.details[0] : '');
+      }
+
+      if (!extractedError && typeof data.message === 'string' && data.message.trim()) {
+        extractedError = data.message.trim();
+      }
+
+      if (!extractedError && Array.isArray(data.details) && data.details.length > 0) {
+        extractedError = String(data.details[0]);
+      }
+    }
+
+    const trimmed = (extractedError || '').toString().trim();
+    const isGarbage =
+      !trimmed ||
+      trimmed === '{}' ||
+      trimmed === '({})' ||
+      trimmed === '[]' ||
+      trimmed === '([])' ||
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      trimmed.includes('[object Object]');
+
+    const cleanMessage = isGarbage
+      ? 'Ocorreu um erro ao processar o seu pedido. Por favor, tente novamente.'
+      : trimmed;
+
+    throw new Error(cleanMessage);
   }
 
   return data;

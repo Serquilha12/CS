@@ -3,8 +3,8 @@ const { supabase, supabaseAdmin } = require('../config/supabase');
 
 async function authMiddleware(req, res, next) {
   try {
-    // Tenta obter o token via cookie HttpOnly ou Header Authorization
-    const token = req.cookies?.cs_token || req.headers.authorization?.replace('Bearer ', '');
+    // Tenta obter o token via cookie HttpOnly, Header Authorization ou corpo da requisição (útil para reset de senha)
+    const token = req.cookies?.cs_token || req.headers.authorization?.replace('Bearer ', '') || req.body?.token;
 
     if (!token) {
       return res.status(401).json({ success: false, error: 'Acesso negado. Token não fornecido.' });

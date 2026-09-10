@@ -77,7 +77,16 @@ export function LandingPage() {
         navigate('/marketplace');
       }
     } catch (err) {
-      showToast(err.message || 'Falha ao iniciar sessão. Verifique os seus dados.', 'error');
+      const msg = (err?.message || '').toString().trim();
+      const isGarbage =
+        !msg ||
+        msg === '{}' ||
+        msg === '({})' ||
+        msg === '[]' ||
+        msg === '([])' ||
+        (msg.startsWith('{') && msg.endsWith('}')) ||
+        msg.includes('[object Object]');
+      showToast(isGarbage ? 'Falha ao iniciar sessão. Verifique os seus dados de acesso.' : msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +139,16 @@ export function LandingPage() {
         navigate('/marketplace');
       }
     } catch (err) {
-      showToast(err.message || 'Erro ao criar conta. Tente novamente.', 'error');
+      const msg = (err?.message || '').toString().trim();
+      const isGarbage =
+        !msg ||
+        msg === '{}' ||
+        msg === '({})' ||
+        msg === '[]' ||
+        msg === '([])' ||
+        (msg.startsWith('{') && msg.endsWith('}')) ||
+        msg.includes('[object Object]');
+      showToast(isGarbage ? 'Erro ao criar conta no servidor. Por favor, tente novamente.' : msg, 'error');
     } finally {
       setIsSubmitting(false);
     }

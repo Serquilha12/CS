@@ -2,7 +2,27 @@ import React from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 
 export function Toast({ message, type = 'info', onClose }) {
-  if (!message) return null;
+  let displayMsg = '';
+  if (typeof message === 'string') {
+    displayMsg = message.trim();
+  } else if (message && typeof message === 'object') {
+    displayMsg = message.message || '';
+  }
+
+  const isGarbage =
+    !displayMsg ||
+    displayMsg === '{}' ||
+    displayMsg === '({})' ||
+    displayMsg === '[]' ||
+    displayMsg === '([])' ||
+    (displayMsg.startsWith('{') && displayMsg.endsWith('}')) ||
+    displayMsg.includes('[object Object]');
+
+  if (isGarbage) {
+    displayMsg = type === 'error' ? 'Ocorreu um erro no servidor. Por favor, tente novamente.' : '';
+  }
+
+  if (!displayMsg) return null;
 
   const styles = {
     success: {
@@ -28,7 +48,7 @@ export function Toast({ message, type = 'info', onClose }) {
   return (
     <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center p-4 rounded-2xl shadow-2xl toast-enter space-x-3 border max-w-md w-11/12 backdrop-blur-md bg-slate-900/95 text-white">
       {currentStyle.icon}
-      <span className="text-sm font-medium flex-1 leading-snug">{message}</span>
+      <span className="text-sm font-medium flex-1 leading-snug">{displayMsg}</span>
       <button
         onClick={onClose}
         className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"

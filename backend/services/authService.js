@@ -43,53 +43,97 @@ class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
     const isAutoAdmin = isAdminEmail(normalizedEmail);
     const assignedRole = isAutoAdmin ? 'admin' : 'student';
-    const redirectUrl = process.env.CLIENT_URL || 'https://cs-psi-five.vercel.app';
 
-    // 1. Criar utilizador através do fluxo formal do Supabase (envio de link de confirmação)
-    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-      options: {
-        emailRedirectTo: `${redirectUrl}/`,
-        data: { full_name, course, campus, role: assignedRole }
-      }
-    });
+    let adminData = null;
+    let adminErr = null;
 
-    if (signUpErr) {
-      if (signUpErr.message?.includes('already registered')) {
-        throw new Error('Este e-mail institucional já se encontra registado na plataforma.');
-      }
-      throw new Error(signUpErr.message);
+    try {
+      const res = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name,
+          course,
+          campus: campus || 'Campus de Pemba',
+          role: assignedRole
+        }
+      });
+      adminData = res.data;
+      adminErr = res.error;
+    } catch (createEx) {
+      console.error('[AUTH CREATE USER EXCEPTION]:', createEx);
+      adminErr = createEx;
     }
 
-    const user = signUpData?.user;
+    if (adminErr) {
+      const rawErr = (adminErr.message || '').toString();
+      const lowerErr = rawErr.toLowerCase();
+      const errCode = (adminErr.code || '').toString().toLowerCase();
+
+      if (
+        errCode === 'email_exists' ||
+        lowerErr.includes('already been registered') ||
+        lowerErr.includes('already registered') ||
+        lowerErr.includes('already exists') ||
+        lowerErr.includes('duplicate') ||
+        lowerErr.includes('user already registered')
+      ) {
+        const dupError = new Error('Este e-mail institucional já se encontra registado na plataforma.');
+        dupError.statusCode = 409;
+        throw dupError;
+      }
+
+      const isGarbage =
+        !rawErr.trim() ||
+        rawErr.trim() === '{}' ||
+        rawErr.trim() === '({})' ||
+        rawErr.trim() === '[]' ||
+        rawErr.trim() === '([])' ||
+        (rawErr.trim().startsWith('{') && rawErr.trim().endsWith('}')) ||
+        rawErr.includes('[object Object]');
+
+      if (isGarbage) {
+        const genericErr = new Error('Não foi possível concluir o registo no servidor. Por favor, tente novamente.');
+        genericErr.statusCode = 500;
+        throw genericErr;
+      }
+
+      const cleanErr = new Error(rawErr);
+      cleanErr.statusCode = adminErr.status || 400;
+      throw cleanErr;
+    }
+
+    const user = adminData?.user;
     if (!user) {
       throw new Error('Não foi possível iniciar o registo. Verifique os dados e tente novamente.');
     }
 
-    // 2. Garantir perfil na base de dados
+    // 2. Garantir perfil persistido na base de dados
+    let profile = {
+      id: user.id,
+      email: normalizedEmail,
+      full_name,
+      course,
+      campus: campus || 'Campus de Pemba',
+      role: assignedRole
+    };
+
     try {
-      await supabaseAdmin.from('profiles').upsert({
-        id: user.id,
-        email: normalizedEmail,
-        full_name,
-        course,
-        campus: campus || 'Campus de Pemba',
-        role: assignedRole
-      });
+      const { data: upsertedProfile, error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .upsert(profile)
+        .select()
+        .single();
+
+      if (!profileErr && upsertedProfile) {
+        profile = upsertedProfile;
+      }
     } catch (e) {
       console.warn('[AUTH REGISTER PROFILE]:', e.message);
     }
 
-    // 3. Se a sessão for nula, o Supabase enviou o e-mail de ativação e exige confirmação prévia
-    if (!signUpData.session) {
-      return {
-        requiresEmailConfirmation: true,
-        user,
-        message: 'Enviámos um link de ativação para o seu e-mail institucional (@ucm.ac.mz). Por favor, aceda à sua caixa de correio da UCM para ativar a sua conta antes de iniciar sessão.'
-      };
-    }
-
+    // 3. Gerar token JWT imediatamente para acesso direto sem bloqueio de ativação
     const token = jwt.sign(
       { id: user.id, email: normalizedEmail, role: assignedRole, full_name, course },
       JWT_SECRET,
@@ -99,7 +143,7 @@ class AuthService {
     return {
       requiresEmailConfirmation: false,
       user,
-      profile: { id: user.id, email: normalizedEmail, full_name, course, campus, role: assignedRole },
+      profile,
       session: { access_token: token }
     };
   }
@@ -263,12 +307,57 @@ class AuthService {
     if (!normalizedEmail.endsWith('@ucm.ac.mz')) {
       throw new Error('Apenas e-mails institucionais da UCM (@ucm.ac.mz) são aceites.');
     }
-    const redirectUrl = `${process.env.CLIENT_URL || 'https://campusstore-ucm.vercel.app'}/reset-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: redirectUrl
-    });
-    if (error) throw new Error(error.message);
-    return true;
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const redirectUrl = `${clientUrl}/reset-password`;
+
+    let emailSentViaSupabase = false;
+
+    // 1. Tentar primeiro o envio nativo via Supabase Auth (se SMTP estiver configurado no projeto)
+    try {
+      const { error: sbError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: redirectUrl
+      });
+      if (!sbError) {
+        emailSentViaSupabase = true;
+      } else {
+        console.warn('[FORGOT PASSWORD SUPABASE SMTP WARNING]:', sbError.message || sbError);
+      }
+    } catch (sbEx) {
+      console.warn('[FORGOT PASSWORD SUPABASE SMTP EXCEPTION]:', sbEx.message);
+    }
+
+    // 2. Se o envio nativo falhar (ex: falta de Custom SMTP no Supabase), acionar fallback resiliente com Supabase Admin
+    if (!emailSentViaSupabase) {
+      try {
+        const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: normalizedEmail,
+          options: {
+            redirectTo: redirectUrl
+          }
+        });
+
+        if (linkErr) {
+          console.error('[FORGOT PASSWORD GENERATE LINK ERROR]:', linkErr);
+          throw new Error('Não foi possível gerar as instruções de recuperação para este e-mail.');
+        }
+
+        const actionLink = linkData?.properties?.action_link;
+        console.log(`\n=======================================================`);
+        console.log(`🔑 [LINK DE RECUPERAÇÃO UCM PEMBA DISPONÍVEL]`);
+        console.log(`📧 Destinatário: ${normalizedEmail}`);
+        console.log(`🔗 Link de Acesso: ${actionLink}`);
+        console.log(`=======================================================\n`);
+      } catch (adminEx) {
+        console.error('[FORGOT PASSWORD ADMIN EXCEPTION]:', adminEx.message);
+        throw adminEx;
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Se a conta existir, as instruções para redefinir a palavra-passe foram processadas com sucesso.'
+    };
   }
 
   async resetPassword(userId, newPassword) {

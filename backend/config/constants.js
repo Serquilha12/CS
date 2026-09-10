@@ -1,7 +1,7 @@
 module.exports = {
   PORT: process.env.PORT || 5000,
   ALLOWED_EMAIL_DOMAIN: '@ucm.ac.mz',
-  DEFAULT_CAMPUS: 'Campus de Pemba',
+  DEFAULT_CAMPUS: 'Pemba',
   DEFAULT_FACULTY: 'Faculdade de Gestão de Turismo e Informática',
   CATEGORIES: [
     'Manuais e Livros',

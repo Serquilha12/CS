@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, ShieldCheck, Loader2, Lock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, ShieldCheck, Loader2, Lock, ArrowLeft } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { PasswordStrengthMeter, checkPasswordStrength } from '../components/PasswordStrengthMeter';
@@ -14,13 +14,49 @@ export function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recoveryToken, setRecoveryToken] = useState(null);
+  const [tokenError, setTokenError] = useState(null);
+
+  // Extração imediata do token de recuperação a partir do hash ou parâmetros da URL
+  useEffect(() => {
+    let extractedToken = null;
+
+    // 1. Tentar extrair do hash da URL (#access_token=... gerado pelo redirecionamento do Supabase)
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      extractedToken = hashParams.get('access_token');
+    }
+
+    // 2. Se não estiver no hash, verificar nos search params (?token=... ou ?code=...)
+    if (!extractedToken && window.location.search) {
+      const searchParams = new URLSearchParams(window.location.search);
+      extractedToken = searchParams.get('token') || searchParams.get('access_token') || searchParams.get('code');
+    }
+
+    // 3. Verificar se já existe uma chave de token no localStorage
+    if (!extractedToken) {
+      extractedToken = localStorage.getItem('cs_token');
+    }
+
+    if (extractedToken) {
+      setRecoveryToken(extractedToken);
+      localStorage.setItem('cs_token', extractedToken);
+    } else {
+      setTokenError('Link de recuperação inválido ou incompleto. Por favor, solicite um novo link de redefinição.');
+    }
+  }, []);
 
   const { isStrong: isPasswordStrong } = checkPasswordStrength(password);
   const doPasswordsMatch = password.length > 0 && password === confirmPassword;
-  const isFormValid = isPasswordStrong && doPasswordsMatch;
+  const isFormValid = isPasswordStrong && doPasswordsMatch && !tokenError;
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (tokenError) {
+      showToast('O link de recuperação é inválido ou expirou. Solicite um novo link.', 'error');
+      return;
+    }
 
     if (!isPasswordStrong) {
       showToast('A palavra-passe deve cumprir todos os 5 critérios de segurança.', 'warning');
@@ -37,7 +73,8 @@ export function ResetPasswordPage() {
     try {
       const res = await fetchApi('/auth/reset-password', {
         method: 'POST',
-        body: { password }
+        headers: recoveryToken ? { 'Authorization': `Bearer ${recoveryToken}` } : {},
+        body: { password, token: recoveryToken }
       });
 
       if (res.success) {
@@ -64,6 +101,22 @@ export function ResetPasswordPage() {
         <p className="text-xs text-slate-500 text-center mt-1 mb-6">
           Defina uma nova palavra-passe forte e segura para a sua conta institucional UCM.
         </p>
+
+        {tokenError && (
+          <div className="mb-5 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 space-y-2 animate-in fade-in duration-200">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <p className="font-semibold leading-relaxed">{tokenError}</p>
+            </div>
+            <Link
+              to="/"
+              className="inline-flex items-center text-xs font-bold text-ucm-emerald hover:underline pt-1"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+              Voltar à página inicial para solicitar novo link
+            </Link>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
