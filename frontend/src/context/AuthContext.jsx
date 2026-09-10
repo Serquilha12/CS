@@ -89,10 +89,11 @@ export function AuthProvider({ children }) {
     });
 
     if (res.success && res.data) {
-      if (res.data.requiresEmailConfirmation || res.requiresEmailConfirmation) {
+      if (res.data.requiresOtp || res.requiresOtp || res.data.requiresEmailConfirmation || res.requiresEmailConfirmation) {
         return {
-          requiresEmailConfirmation: true,
-          message: res.message || 'Verifique o seu e-mail institucional (@ucm.ac.mz) para ativar a sua conta.'
+          requiresOtp: true,
+          email: res.data.email || data.email,
+          message: res.message || 'Código de verificação enviado para o seu e-mail institucional.'
         };
       }
 
@@ -106,6 +107,31 @@ export function AuthProvider({ children }) {
     return null;
   }
 
+  async function verifyOtp(email, token, type = 'signup') {
+    const res = await fetchApi('/auth/verify-otp', {
+      method: 'POST',
+      body: { email, token, type }
+    });
+
+    if (res.success && res.data) {
+      if (res.data.token) {
+        localStorage.setItem('cs_token', res.data.token);
+      }
+      const profile = res.data.profile || res.data.user || res.data;
+      setUser(profile);
+      return profile;
+    }
+    throw new Error(res.message || 'Falha ao verificar o código.');
+  }
+
+  async function resendOtp(email, type = 'signup') {
+    const res = await fetchApi('/auth/resend-otp', {
+      method: 'POST',
+      body: { email, type }
+    });
+    return res;
+  }
+
   async function logout() {
     try {
       await fetchApi('/auth/logout', { method: 'POST' });
@@ -115,7 +141,18 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        verifyOtp,
+        resendOtp,
+        logout,
+        isAdmin: user?.role === 'admin'
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

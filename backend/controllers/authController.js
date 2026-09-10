@@ -3,6 +3,8 @@ const {
   registerSchema,
   loginSchema,
   resetPasswordSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
   updateProfileSchema
 } = require('../utils/validators');
 
@@ -12,14 +14,16 @@ class AuthController {
       const validatedData = registerSchema.parse(req.body);
       const result = await authService.registerUser(validatedData);
 
-      if (result.requiresEmailConfirmation) {
+      if (result.requiresOtp || result.requiresEmailConfirmation) {
         return res.status(201).json({
           success: true,
+          requiresOtp: true,
           requiresEmailConfirmation: true,
-          message: result.message,
+          email: result.email,
+          message: result.message || 'Código de verificação enviado para o seu e-mail institucional.',
           data: {
-            requiresEmailConfirmation: true,
-            user: result.user
+            requiresOtp: true,
+            email: result.email
           }
         });
       }
@@ -41,6 +45,48 @@ class AuthController {
           user: result.user,
           profile: result.profile
         }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async verifyOtp(req, res, next) {
+    try {
+      const validatedData = verifyOtpSchema.parse(req.body);
+      const result = await authService.verifyOtp(validatedData);
+
+      if (result.session?.access_token) {
+        res.cookie('cs_token', result.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Conta verificada com sucesso! Bem-vindo à CampusStore.',
+        data: {
+          token: result.session?.access_token,
+          user: result.user,
+          profile: result.profile
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async resendOtp(req, res, next) {
+    try {
+      const validatedData = resendOtpSchema.parse(req.body);
+      const result = await authService.resendOtp(validatedData);
+
+      return res.status(200).json({
+        success: true,
+        message: result.message || 'Novo código de verificação enviado para o seu e-mail institucional.'
       });
     } catch (err) {
       next(err);
@@ -103,7 +149,8 @@ class AuthController {
     try {
       const { email } = req.body;
       if (!email) return res.status(400).json({ success: false, error: 'Indique o seu e-mail institucional.' });
-      await authService.forgotPassword(email);
+      const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
+      await authService.forgotPassword(email, origin);
       return res.status(200).json({
         success: true,
         message: 'Instruções de recuperação enviadas para o seu e-mail institucional UCM.'

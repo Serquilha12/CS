@@ -62,6 +62,38 @@ const resetPasswordSchema = z.object({
   password: passwordSchema
 });
 
+// Esquema de Verificação de Código OTP (6 dígitos)
+const verifyOtpSchema = z.object({
+  email: z
+    .string({ required_error: 'O e-mail é obrigatório' })
+    .trim()
+    .toLowerCase()
+    .email('Formato de e-mail inválido')
+    .refine(
+      (val) => UCM_EMAIL_REGEX.test(val),
+      `Apenas e-mails institucionais da UCM (${ALLOWED_EMAIL_DOMAIN}) são permitidos.`
+    ),
+  token: z
+    .string({ required_error: 'O código de verificação é obrigatório' })
+    .trim()
+    .regex(/^\d{6}$/, 'O código deve conter exatamente 6 algarismos numéricos'),
+  type: z.enum(['signup', 'recovery', 'email']).default('signup')
+});
+
+// Esquema de Reenvio de Código OTP
+const resendOtpSchema = z.object({
+  email: z
+    .string({ required_error: 'O e-mail é obrigatório' })
+    .trim()
+    .toLowerCase()
+    .email('Formato de e-mail inválido')
+    .refine(
+      (val) => UCM_EMAIL_REGEX.test(val),
+      `Apenas e-mails institucionais da UCM (${ALLOWED_EMAIL_DOMAIN}) são permitidos.`
+    ),
+  type: z.enum(['signup', 'recovery', 'email']).default('signup')
+});
+
 // Esquema de Atualização de Perfil
 const updateProfileSchema = z.object({
   full_name: z
@@ -143,6 +175,8 @@ module.exports = {
   registerSchema,
   loginSchema,
   resetPasswordSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
   updateProfileSchema,
   listingSchema,
   reservationSchema

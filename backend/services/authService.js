@@ -44,35 +44,38 @@ class AuthService {
     const isAutoAdmin = isAdminEmail(normalizedEmail);
     const assignedRole = isAutoAdmin ? 'admin' : 'student';
 
-    let adminData = null;
-    let adminErr = null;
+    // 1. Tentar registo nativo via Supabase Auth (despoleta o envio de OTP de 6 dígitos pelo SMTP configurado)
+    let signUpData = null;
+    let signUpErr = null;
 
     try {
-      const res = await supabaseAdmin.auth.admin.createUser({
+      const res = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        email_confirm: true,
-        user_metadata: {
-          full_name,
-          course,
-          campus: campus || 'Campus de Pemba',
-          role: assignedRole
+        options: {
+          data: {
+            full_name,
+            course,
+            campus: campus || 'Campus de Pemba',
+            role: assignedRole
+          }
         }
       });
-      adminData = res.data;
-      adminErr = res.error;
+      signUpData = res.data;
+      signUpErr = res.error;
     } catch (createEx) {
-      console.error('[AUTH CREATE USER EXCEPTION]:', createEx);
-      adminErr = createEx;
+      console.error('[AUTH SIGNUP EXCEPTION]:', createEx);
+      signUpErr = createEx;
     }
 
-    if (adminErr) {
-      const rawErr = (adminErr.message || '').toString();
+    if (signUpErr) {
+      const rawErr = (signUpErr.message || '').toString();
       const lowerErr = rawErr.toLowerCase();
-      const errCode = (adminErr.code || '').toString().toLowerCase();
+      const errCode = (signUpErr.code || '').toString().toLowerCase();
 
       if (
         errCode === 'email_exists' ||
+        errCode === 'user_already_exists' ||
         lowerErr.includes('already been registered') ||
         lowerErr.includes('already registered') ||
         lowerErr.includes('already exists') ||
@@ -84,33 +87,18 @@ class AuthService {
         throw dupError;
       }
 
-      const isGarbage =
-        !rawErr.trim() ||
-        rawErr.trim() === '{}' ||
-        rawErr.trim() === '({})' ||
-        rawErr.trim() === '[]' ||
-        rawErr.trim() === '([])' ||
-        (rawErr.trim().startsWith('{') && rawErr.trim().endsWith('}')) ||
-        rawErr.includes('[object Object]');
-
-      if (isGarbage) {
-        const genericErr = new Error('Não foi possível concluir o registo no servidor. Por favor, tente novamente.');
-        genericErr.statusCode = 500;
-        throw genericErr;
-      }
-
-      const cleanErr = new Error(rawErr);
-      cleanErr.statusCode = adminErr.status || 400;
+      const cleanErr = new Error(rawErr || 'Não foi possível concluir o registo. Tente novamente.');
+      cleanErr.statusCode = signUpErr.status || 400;
       throw cleanErr;
     }
 
-    const user = adminData?.user;
+    const user = signUpData?.user;
     if (!user) {
       throw new Error('Não foi possível iniciar o registo. Verifique os dados e tente novamente.');
     }
 
-    // 2. Garantir perfil persistido na base de dados
-    let profile = {
+    // 2. Pré-registar o perfil em 'profiles'
+    const profile = {
       id: user.id,
       email: normalizedEmail,
       full_name,
@@ -120,31 +108,125 @@ class AuthService {
     };
 
     try {
-      const { data: upsertedProfile, error: profileErr } = await supabaseAdmin
-        .from('profiles')
-        .upsert(profile)
-        .select()
-        .single();
-
-      if (!profileErr && upsertedProfile) {
-        profile = upsertedProfile;
-      }
+      await supabaseAdmin.from('profiles').upsert(profile);
     } catch (e) {
-      console.warn('[AUTH REGISTER PROFILE]:', e.message);
+      console.warn('[AUTH REGISTER PROFILE PRE-INSERT]:', e.message);
     }
 
-    // 3. Gerar token JWT imediatamente para acesso direto sem bloqueio de ativação
-    const token = jwt.sign(
-      { id: user.id, email: normalizedEmail, role: assignedRole, full_name, course },
+    // Se o utilizador já tiver sessão (ex: confirmação desligada no Supabase), acede direto
+    if (signUpData.session?.access_token) {
+      const token = jwt.sign(
+        { id: user.id, email: normalizedEmail, role: assignedRole, full_name, course },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      return {
+        requiresOtp: false,
+        user,
+        profile,
+        session: { access_token: token }
+      };
+    }
+
+    // Fluxo padrão: Requer validação do código OTP de 6 dígitos enviado por e-mail
+    return {
+      requiresOtp: true,
+      email: normalizedEmail,
+      message: 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
+    };
+  }
+
+  async verifyOtp({ email, token, type = 'signup' }) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const cleanToken = (token || '').trim();
+
+    // 1. Tentar validação no Supabase Auth com tipo 'signup'
+    let verifyRes = await supabase.auth.verifyOtp({
+      email: normalizedEmail,
+      token: cleanToken,
+      type: type === 'recovery' ? 'recovery' : 'signup'
+    });
+
+    // 2. Se falhar, tentar com type 'email' como fallback do Supabase
+    if (verifyRes.error && type === 'signup') {
+      const fallbackRes = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: cleanToken,
+        type: 'email'
+      });
+      if (!fallbackRes.error) {
+        verifyRes = fallbackRes;
+      }
+    }
+
+    if (verifyRes.error) {
+      console.warn('[AUTH VERIFY OTP ERROR]:', verifyRes.error.message || verifyRes.error);
+      const invalidOtpErr = new Error('Código de verificação incorreto ou expirado. Verifique os 6 algarismos recebidos.');
+      invalidOtpErr.statusCode = 400;
+      throw invalidOtpErr;
+    }
+
+    const user = verifyRes.data?.user;
+    if (!user) {
+      throw new Error('Não foi possível identificar a conta associada a este código de verificação.');
+    }
+
+    // 3. Obter ou garantir o perfil do utilizador na tabela 'profiles'
+    let profile = await this.getProfile(user.id);
+    const metadata = user.user_metadata || {};
+    const isAutoAdmin = isAdminEmail(normalizedEmail);
+    const role = isAutoAdmin ? 'admin' : (profile?.role || metadata.role || 'student');
+
+    profile = {
+      id: user.id,
+      email: normalizedEmail,
+      full_name: profile?.full_name || metadata.full_name || 'Estudante UCM',
+      course: profile?.course || metadata.course || 'Licenciatura em Tecnologias da Informação',
+      campus: profile?.campus || metadata.campus || 'Campus de Pemba',
+      role
+    };
+
+    try {
+      await supabaseAdmin.from('profiles').upsert(profile);
+    } catch (e) {
+      console.warn('[AUTH VERIFY OTP PROFILE UPSERT]:', e.message);
+    }
+
+    // 4. Emitir JWT assinado de 7 dias
+    const jwtToken = jwt.sign(
+      {
+        id: user.id,
+        email: normalizedEmail,
+        role: profile.role,
+        full_name: profile.full_name,
+        course: profile.course
+      },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     return {
-      requiresEmailConfirmation: false,
+      session: { access_token: jwtToken },
       user,
-      profile,
-      session: { access_token: token }
+      profile
+    };
+  }
+
+  async resendOtp({ email, type = 'signup' }) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const { error } = await supabase.auth.resend({
+      type: type === 'recovery' ? 'recovery' : 'signup',
+      email: normalizedEmail
+    });
+
+    if (error) {
+      console.warn('[AUTH RESEND OTP WARNING]:', error.message || error);
+      throw new Error(error.message || 'Falha ao reenviar o código de verificação.');
+    }
+
+    return {
+      success: true,
+      message: 'Novo código de verificação enviado para o seu e-mail institucional.'
     };
   }
 
@@ -302,12 +384,12 @@ class AuthService {
     return data;
   }
 
-  async forgotPassword(email) {
+  async forgotPassword(email, clientOrigin = null) {
     const normalizedEmail = (email || '').toLowerCase().trim();
     if (!normalizedEmail.endsWith('@ucm.ac.mz')) {
       throw new Error('Apenas e-mails institucionais da UCM (@ucm.ac.mz) são aceites.');
     }
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = clientOrigin || process.env.CLIENT_URL || 'https://campusstore-ucm.vercel.app';
     const redirectUrl = `${clientUrl}/reset-password`;
 
     let emailSentViaSupabase = false;

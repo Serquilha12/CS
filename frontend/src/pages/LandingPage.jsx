@@ -4,7 +4,8 @@ import {
   GraduationCap, KeyRound, Repeat, BookOpen, LogIn, UserPlus,
   Eye, EyeOff, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck,
   MessageSquare, Sparkles, ArrowRight, Check, HeartHandshake, CheckCheck,
-  Calculator, Search, MapPin, Users, ArrowUpRight, FileText, Sparkle
+  Calculator, Search, MapPin, Users, ArrowUpRight, FileText, Sparkle,
+  Mail, Lock, User, ChevronDown
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -12,15 +13,18 @@ import { UCM_COURSES } from '../constants';
 import { fetchApi } from '../services/api';
 import { Logo } from '../components/Logo';
 import { PasswordStrengthMeter, checkPasswordStrength } from '../components/PasswordStrengthMeter';
+import { OtpVerificationModal } from '../components/OtpVerificationModal';
 
 export function LandingPage() {
-  const { login, register } = useContext(AuthContext);
+  const { login, register, verifyOtp, resendOtp } = useContext(AuthContext);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [isLoginModal, setIsLoginModal] = useState(false);
   const [isRegisterModal, setIsRegisterModal] = useState(false);
   const [isForgotModal, setIsForgotModal] = useState(false);
+  const [isOtpModal, setIsOtpModal] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
 
   // Estados de Palavra-passe Visível
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -124,15 +128,14 @@ export function LandingPage() {
         email: emailSubmitted
       });
 
-      if (res?.requiresEmailConfirmation) {
-        setEmailConfirmationSent(emailSubmitted);
-        setLoginData(prev => ({ ...prev, email: emailSubmitted }));
+      if (res?.requiresOtp || res?.requiresEmailConfirmation) {
+        setOtpEmail(emailSubmitted);
         setIsRegisterModal(false);
-        setIsLoginModal(true);
+        setIsOtpModal(true);
         showToast(
-          res.message || 'Link de ativação enviado! Verifique o seu correio institucional (@ucm.ac.mz).',
+          res.message || 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).',
           'info',
-          8000
+          6000
         );
       } else {
         showToast('Conta criada com sucesso! Bem-vindo à CampusStore.', 'success');
@@ -605,32 +608,79 @@ export function LandingPage() {
               </div>
             )}
 
+            {/* Atalhos Rápidos para Teste de Contas */}
+            <div className="mb-4 p-2.5 bg-slate-50 border border-slate-200/70 rounded-2xl flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-500 font-medium flex items-center">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5 shrink-0" />
+                Preenchimento rápido:
+              </span>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLoginData({ email: 'estudante.teste@ucm.ac.mz', password: 'Senha123!' })}
+                  className="text-[10px] font-bold text-slate-700 bg-white hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-2xs cursor-pointer"
+                >
+                  Estudante
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginData({ email: 'admin.pemba@ucm.ac.mz', password: 'AdminPass123!' })}
+                  className="text-[10px] font-bold text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-700 border border-slate-200 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-2xs cursor-pointer"
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+
             <form onSubmit={handleLoginSubmit} className="space-y-3.5 sm:space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  E-mail Institucional (@ucm.ac.mz)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    E-mail Institucional (@ucm.ac.mz)
+                  </label>
+                  {!loginData.email.includes('@') && loginData.email.trim().length >= 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setLoginData(prev => ({ ...prev, email: `${prev.email.trim()}@ucm.ac.mz` }))}
+                      className="inline-flex items-center text-[10px] font-bold text-ucm-emerald bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2 py-0.5 rounded-md transition-all active:scale-95 animate-in fade-in duration-200 cursor-pointer"
+                    >
+                      <span>+ @ucm.ac.mz</span>
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
+                  <Mail
+                    className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                      loginData.email.length > 0
+                        ? isLoginEmailValid
+                          ? 'text-emerald-600'
+                          : 'text-rose-500'
+                        : 'text-slate-400'
+                    }`}
+                  />
                   <input
                     type="email"
                     required
                     autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     placeholder="estudante@ucm.ac.mz"
                     value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className={`w-full p-3 sm:p-3.5 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${loginData.email.length > 0
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                    className={`w-full p-3 sm:p-3.5 pl-10 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${
+                      loginData.email.length > 0
                         ? isLoginEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
                           : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
                         : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
-                      }`}
+                    }`}
                   />
                   {loginData.email.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {isLoginEmailValid ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 animate-in zoom-in-75 duration-200" />
                       ) : (
-                        <AlertCircle className="w-5 h-5 text-rose-500" />
+                        <AlertCircle className="w-5 h-5 text-rose-500 animate-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
@@ -664,6 +714,7 @@ export function LandingPage() {
                   </button>
                 </div>
                 <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     required
@@ -671,12 +722,12 @@ export function LandingPage() {
                     placeholder="••••••••"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    className="w-full p-3 sm:p-3.5 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
+                    className="w-full p-3 sm:p-3.5 pl-10 pr-11 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px] transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
                     aria-label={showLoginPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
                   >
                     {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -757,14 +808,36 @@ export function LandingPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
                 <div className="relative">
+                  <User
+                    className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                      regData.full_name.length > 0
+                        ? isFullNameValid
+                          ? 'text-emerald-600'
+                          : 'text-rose-500'
+                        : 'text-slate-400'
+                    }`}
+                  />
                   <input
                     type="text"
                     required
                     autoComplete="name"
+                    autoCapitalize="words"
                     placeholder="Ex: Ancha Jussa"
                     value={regData.full_name}
                     onChange={(e) => setRegData({ ...regData, full_name: e.target.value })}
-                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                    onBlur={(e) => {
+                      const trimmed = e.target.value.trim().replace(/\s+/g, ' ');
+                      if (trimmed) {
+                        const formatted = trimmed
+                          .split(' ')
+                          .map((w, i) => (i > 0 && ['de', 'da', 'do', 'das', 'dos', 'e'].includes(w.toLowerCase()))
+                            ? w.toLowerCase()
+                            : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                          .join(' ');
+                        setRegData(prev => ({ ...prev, full_name: formatted }));
+                      }
+                    }}
+                    className={`w-full p-3 pl-10 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] transition-all ${
                       regData.full_name.length > 0
                         ? isFullNameValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -775,9 +848,9 @@ export function LandingPage() {
                   {regData.full_name.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {isFullNameValid ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 animate-in zoom-in-75 duration-200" />
                       ) : (
-                        <AlertCircle className="w-5 h-5 text-rose-500" />
+                        <AlertCircle className="w-5 h-5 text-rose-500 animate-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
@@ -796,28 +869,56 @@ export function LandingPage() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Curso UCM</label>
-                <select
-                  value={regData.course}
-                  onChange={(e) => setRegData({ ...regData, course: e.target.value })}
-                  className="w-full p-3 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px] bg-white cursor-pointer"
-                >
-                  {UCM_COURSES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <GraduationCap className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <select
+                    value={regData.course}
+                    onChange={(e) => setRegData({ ...regData, course: e.target.value })}
+                    className="w-full p-3 pl-10 pr-10 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px] bg-white cursor-pointer appearance-none transition-all"
+                  >
+                    {UCM_COURSES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">E-mail Institucional (@ucm.ac.mz)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    E-mail Institucional (@ucm.ac.mz)
+                  </label>
+                  {!regData.email.includes('@') && regData.email.trim().length >= 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setRegData(prev => ({ ...prev, email: `${prev.email.trim()}@ucm.ac.mz` }))}
+                      className="inline-flex items-center text-[10px] font-bold text-ucm-emerald bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2 py-0.5 rounded-md transition-all active:scale-95 animate-in fade-in duration-200 cursor-pointer"
+                    >
+                      <span>+ @ucm.ac.mz</span>
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
+                  <Mail
+                    className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                      regData.email.length > 0
+                        ? isRegEmailValid
+                          ? 'text-emerald-600'
+                          : 'text-rose-500'
+                        : 'text-slate-400'
+                    }`}
+                  />
                   <input
                     type="email"
                     required
                     autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     placeholder="estudante@ucm.ac.mz"
                     value={regData.email}
-                    onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className={`w-full p-3 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                    onChange={(e) => setRegData({ ...regData, email: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                    className={`w-full p-3 pl-10 pr-10 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] transition-all ${
                       regData.email.length > 0
                         ? isRegEmailValid
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -828,9 +929,9 @@ export function LandingPage() {
                   {regData.email.length > 0 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                       {isRegEmailValid ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 animate-in zoom-in-75 duration-200" />
                       ) : (
-                        <AlertCircle className="w-5 h-5 text-rose-500" />
+                        <AlertCircle className="w-5 h-5 text-rose-500 animate-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
@@ -852,6 +953,7 @@ export function LandingPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Palavra-passe Forte</label>
                 <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type={showRegPassword ? 'text' : 'password'}
                     required
@@ -859,7 +961,7 @@ export function LandingPage() {
                     placeholder="Mínimo 8 caracteres (A-Z, a-z, 0-9, !@#$)"
                     value={regData.password}
                     onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    className={`w-full p-3 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                    className={`w-full p-3 pl-10 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] transition-all ${
                       regData.password.length > 0
                         ? isRegPasswordStrong
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -884,6 +986,7 @@ export function LandingPage() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Confirmar Palavra-passe</label>
                 <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type={showRegConfirmPassword ? 'text' : 'password'}
                     required
@@ -891,7 +994,7 @@ export function LandingPage() {
                     placeholder="Repita a palavra-passe criada"
                     value={regConfirmPassword}
                     onChange={(e) => setRegConfirmPassword(e.target.value)}
-                    className={`w-full p-3 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] ${
+                    className={`w-full p-3 pl-10 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] transition-all ${
                       regConfirmPassword.length > 0
                         ? doPasswordsMatch
                           ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
@@ -1041,16 +1144,67 @@ export function LandingPage() {
 
                 <form onSubmit={handleForgotSubmit} className="space-y-3.5 sm:space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">E-mail @ucm.ac.mz</label>
-                    <input
-                      type="email"
-                      required
-                      autoComplete="email"
-                      placeholder="estudante@ucm.ac.mz"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full p-3 sm:p-3.5 border border-slate-300 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-ucm-emerald focus:outline-none min-h-[48px]"
-                    />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700">
+                        E-mail Institucional (@ucm.ac.mz)
+                      </label>
+                      {!forgotEmail.includes('@') && forgotEmail.trim().length >= 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setForgotEmail(prev => `${prev.trim()}@ucm.ac.mz`)}
+                          className="inline-flex items-center text-[10px] font-bold text-ucm-emerald bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2 py-0.5 rounded-md transition-all active:scale-95 animate-in fade-in duration-200 cursor-pointer"
+                        >
+                          <span>+ @ucm.ac.mz</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Mail
+                        className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                          forgotEmail.length > 0
+                            ? forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
+                              ? 'text-emerald-600'
+                              : 'text-rose-500'
+                            : 'text-slate-400'
+                        }`}
+                      />
+                      <input
+                        type="email"
+                        required
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        spellCheck="false"
+                        placeholder="estudante@ucm.ac.mz"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                        className={`w-full p-3 sm:p-3.5 pl-10 pr-10 border rounded-xl text-base sm:text-sm transition-all focus:outline-none min-h-[48px] ${
+                          forgotEmail.length > 0
+                            ? forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz')
+                              ? 'border-emerald-500 bg-emerald-50/20 focus:ring-2 focus:ring-emerald-500'
+                              : 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-400'
+                            : 'border-slate-300 focus:ring-2 focus:ring-ucm-emerald'
+                        }`}
+                      />
+                      {forgotEmail.length > 0 && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          {forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz') ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 animate-in zoom-in-75 duration-200" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-rose-500 animate-in zoom-in-75 duration-200" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-h-[20px] mt-1 flex items-center">
+                      {forgotEmail.length > 0 && !forgotEmail.toLowerCase().trim().endsWith('@ucm.ac.mz') ? (
+                        <p className="text-[11px] font-bold text-rose-600 flex items-center animate-in fade-in duration-200">
+                          <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                          O e-mail deve terminar com @ucm.ac.mz
+                        </p>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">Enviaremos o link de recuperação para este endereço</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex space-x-2.5 sm:space-x-3 pt-2">
@@ -1088,6 +1242,27 @@ export function LandingPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE VERIFICAÇÃO DE CÓDIGO OTP (6 DÍGITOS) */}
+      <OtpVerificationModal
+        isOpen={isOtpModal}
+        email={otpEmail}
+        onClose={() => setIsOtpModal(false)}
+        onSuccess={(profile) => {
+          setIsOtpModal(false);
+          if (profile?.role === 'admin') {
+            navigate('/admin');
+          } else {
+            navigate('/marketplace');
+          }
+        }}
+        onChangeEmail={() => {
+          setIsOtpModal(false);
+          setIsRegisterModal(true);
+        }}
+        verifyOtpFn={verifyOtp}
+        resendOtpFn={resendOtp}
+      />
     </div>
   );
 }
