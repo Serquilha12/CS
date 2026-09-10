@@ -138,7 +138,13 @@ class AuthService {
 
   async verifyOtp({ email, token, type = 'signup' }) {
     const normalizedEmail = email.toLowerCase().trim();
-    const cleanToken = (token || '').trim();
+    const cleanToken = (token || '').toString().trim().replace(/\D/g, '');
+
+    if (!cleanToken || cleanToken.length < 6) {
+      const shortErr = new Error('Introduza o código de verificação completo recebido no e-mail.');
+      shortErr.statusCode = 400;
+      throw shortErr;
+    }
 
     // 1. Tentar validação no Supabase Auth com tipo 'signup'
     let verifyRes = await supabase.auth.verifyOtp({
@@ -147,21 +153,46 @@ class AuthService {
       type: type === 'recovery' ? 'recovery' : 'signup'
     });
 
-    // 2. Se falhar, tentar com type 'email' como fallback do Supabase
+    // 2. Fallback com type 'email' via cliente público
     if (verifyRes.error && type === 'signup') {
       const fallbackRes = await supabase.auth.verifyOtp({
         email: normalizedEmail,
         token: cleanToken,
         type: 'email'
       });
-      if (!fallbackRes.error) {
+      if (!fallbackRes.error && fallbackRes.data?.user) {
         verifyRes = fallbackRes;
+      }
+    }
+
+    // 3. Fallback adicional via Supabase Admin (service_role)
+    if (verifyRes.error) {
+      try {
+        const adminRes = await supabaseAdmin.auth.verifyOtp({
+          email: normalizedEmail,
+          token: cleanToken,
+          type: type === 'recovery' ? 'recovery' : 'signup'
+        });
+        if (!adminRes.error && adminRes.data?.user) {
+          verifyRes = adminRes;
+        } else if (type === 'signup') {
+          const adminEmailRes = await supabaseAdmin.auth.verifyOtp({
+            email: normalizedEmail,
+            token: cleanToken,
+            type: 'email'
+          });
+          if (!adminEmailRes.error && adminEmailRes.data?.user) {
+            verifyRes = adminEmailRes;
+          }
+        }
+      } catch (adminVerifyEx) {
+        console.warn('[AUTH ADMIN VERIFY OTP EXCEPTION]:', adminVerifyEx.message);
       }
     }
 
     if (verifyRes.error) {
       console.warn('[AUTH VERIFY OTP ERROR]:', verifyRes.error.message || verifyRes.error);
-      const invalidOtpErr = new Error('Código de verificação incorreto ou expirado. Verifique os 6 algarismos recebidos.');
+      const invalidOtpErr = new Error('Código de verificação incorreto ou expirado. Verifique os algarismos recebidos no e-mail.');
       invalidOtpErr.statusCode = 400;
       throw invalidOtpErr;
     }

@@ -62,7 +62,7 @@ const resetPasswordSchema = z.object({
   password: passwordSchema
 });
 
-// Esquema de Verificação de Código OTP (6 dígitos)
+// Esquema de Verificação de Código OTP (suporta 6 a 8 dígitos do Supabase)
 const verifyOtpSchema = z.object({
   email: z
     .string({ required_error: 'O e-mail é obrigatório' })
@@ -76,7 +76,7 @@ const verifyOtpSchema = z.object({
   token: z
     .string({ required_error: 'O código de verificação é obrigatório' })
     .trim()
-    .regex(/^\d{6}$/, 'O código deve conter exatamente 6 algarismos numéricos'),
+    .regex(/^\d{6,10}$/, 'O código deve conter entre 6 e 8 algarismos numéricos'),
   type: z.enum(['signup', 'recovery', 'email']).default('signup')
 });
 

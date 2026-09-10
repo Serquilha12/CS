@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, Mail, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
+import { ShieldCheck, Mail, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2, X, RotateCcw } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+
+const OTP_LENGTH = 8; // Supabase Auth GoTrue padrão de 8 dígitos para este projeto
 
 export function OtpVerificationModal({
   isOpen,
@@ -11,7 +13,7 @@ export function OtpVerificationModal({
   verifyOtpFn,
   resendOtpFn
 }) {
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -23,7 +25,7 @@ export function OtpVerificationModal({
   // Inicializar o foco na primeira caixa quando o modal abre
   useEffect(() => {
     if (isOpen) {
-      setOtp(['', '', '', '', '', '']);
+      setOtp(Array(OTP_LENGTH).fill(''));
       setErrorMessage('');
       setCountdown(60);
       const timer = setTimeout(() => {
@@ -47,67 +49,119 @@ export function OtpVerificationModal({
   if (!isOpen) return null;
 
   const otpCode = otp.join('');
-  const isComplete = otpCode.length === 6 && /^\d{6}$/.test(otpCode);
+  // Aceita 8 dígitos (padrão Supabase) ou 6 dígitos
+  const isValidLength = otpCode.length === OTP_LENGTH || otpCode.length === 6;
 
-  function handleChange(index, value) {
-    // Apenas algarismos numéricos são permitidos
-    const digit = value.replace(/\D/g, '').slice(-1);
+  function handleDigitChange(index, value) {
+    if (!value) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      setErrorMessage('');
+      return;
+    }
+
+    const clean = value.replace(/\D/g, '');
+    if (!clean) return;
+
+    if (clean.length > 1) {
+      fillPastedDigits(clean, index);
+      return;
+    }
+
+    const digit = clean.slice(-1);
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
     setErrorMessage('');
 
-    // Avançar o foco automaticamente para a próxima caixa se foi preenchido
-    if (digit && index < 5 && inputRefs.current[index + 1]) {
+    // Avançar foco automaticamente
+    if (digit && index < OTP_LENGTH - 1 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1].focus();
     }
   }
 
   function handleKeyDown(index, e) {
     if (e.key === 'Backspace') {
-      if (!otp[index] && index > 0 && inputRefs.current[index - 1]) {
-        // Se a caixa atual já estiver vazia, volta para a anterior e foca nela
-        inputRefs.current[index - 1].focus();
+      e.preventDefault();
+      const newOtp = [...otp];
+      if (otp[index]) {
+        // Se a caixa atual tem valor, apaga-o
+        newOtp[index] = '';
+        setOtp(newOtp);
+        setErrorMessage('');
+      } else if (index > 0) {
+        // Se já está vazia, apaga a anterior e foca nela
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+        setErrorMessage('');
+        inputRefs.current[index - 1]?.focus();
       }
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      setErrorMessage('');
     } else if (e.key === 'ArrowLeft' && index > 0) {
-      inputRefs.current[index - 1].focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
-      inputRefs.current[index + 1].focus();
+      e.preventDefault();
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      e.preventDefault();
+      inputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function fillPastedDigits(cleanDigits, startIndex = 0) {
+    const chars = cleanDigits.slice(0, OTP_LENGTH).split('');
+    const newOtp = [...otp];
+
+    chars.forEach((c, idx) => {
+      const target = startIndex + idx;
+      if (target < OTP_LENGTH) {
+        newOtp[target] = c;
+      }
+    });
+
+    setOtp(newOtp);
+    setErrorMessage('');
+
+    const nextIndex = Math.min(startIndex + chars.length, OTP_LENGTH - 1);
+    if (inputRefs.current[nextIndex]) {
+      inputRefs.current[nextIndex].focus();
     }
   }
 
   function handlePaste(e) {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pastedData) return;
+    const pastedText = e.clipboardData?.getData('text') || '';
+    const cleanDigits = pastedText.replace(/\D/g, '');
+    if (!cleanDigits) return;
 
-    const newOtp = ['', '', '', '', '', ''];
-    pastedData.split('').forEach((char, i) => {
-      if (i < 6) newOtp[i] = char;
-    });
-    setOtp(newOtp);
+    fillPastedDigits(cleanDigits, 0);
+  }
+
+  function handleClearAll() {
+    setOtp(Array(OTP_LENGTH).fill(''));
     setErrorMessage('');
-
-    // Focar na última caixa preenchida ou na seguinte
-    const focusIndex = Math.min(pastedData.length, 5);
-    if (inputRefs.current[focusIndex]) {
-      inputRefs.current[focusIndex].focus();
+    if (inputRefs.current[0]) {
+      inputRefs.current[0].focus();
     }
   }
 
   async function handleVerify(e) {
     if (e) e.preventDefault();
-    if (!isComplete || isSubmitting) return;
+    if (!isValidLength || isSubmitting) return;
 
     setIsSubmitting(true);
     setErrorMessage('');
 
     try {
       const profile = await verifyOtpFn(email, otpCode, 'signup');
-      showToast('Conta universitária ativada com sucesso! Bem-vindo.', 'success');
+      showToast('Conta universitária ativada com sucesso! Bem-vindo à CampusStore.', 'success');
       onSuccess(profile);
     } catch (err) {
-      const msg = err?.message || 'Código de verificação incorreto ou expirado.';
+      const msg = err?.message || 'Código de verificação incorreto ou expirado. Verifique os algarismos no e-mail.';
       setErrorMessage(msg);
       showToast(msg, 'error');
     } finally {
@@ -123,9 +177,9 @@ export function OtpVerificationModal({
 
     try {
       await resendOtpFn(email, 'signup');
-      showToast('Novo código de 6 algarismos enviado para o seu correio institucional!', 'info', 6000);
+      showToast('Novo código de verificação enviado para o seu correio institucional!', 'info', 6000);
       setCountdown(60);
-      setOtp(['', '', '', '', '', '']);
+      setOtp(Array(OTP_LENGTH).fill(''));
       if (inputRefs.current[0]) {
         inputRefs.current[0].focus();
       }
@@ -145,7 +199,7 @@ export function OtpVerificationModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
+      <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 shadow-2xl border border-white/50 relative max-h-[85vh] overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-7 animate-in slide-in-from-bottom duration-300 sm:zoom-in-95">
 
         {/* Drag Handle Mobile */}
         <div className="sm:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4" />
@@ -160,26 +214,29 @@ export function OtpVerificationModal({
         </button>
 
         {/* Cabeçalho */}
-        <div className="text-center mb-6">
-          <div className="w-13 h-13 sm:w-14 sm:h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3 mx-auto text-ucm-emerald border border-emerald-100/80 shadow-xs">
-            <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8" />
+        <div className="text-center mb-5 sm:mb-6">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2.5 mx-auto text-ucm-emerald border border-emerald-100/80 shadow-xs">
+            <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
-            Verificar Código UCM
+            Verificar Código Institucional
           </h2>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed px-2">
-            Introduza o código de <strong className="text-slate-900 font-semibold">6 algarismos</strong> enviado para o seu e-mail institucional:
+            Introduza o código recebido no seu e-mail institucional:
           </p>
           <div className="inline-flex items-center space-x-1.5 mt-2 px-3 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-800 border border-slate-200">
             <Mail className="w-3.5 h-3.5 text-ucm-emerald" />
-            <span className="truncate max-w-[240px]">{email}</span>
+            <span className="truncate max-w-[260px]">{email}</span>
           </div>
         </div>
 
-        {/* Formulário de OTP com 6 caixas individuais */}
-        <form onSubmit={handleVerify} className="space-y-5">
+        {/* Formulário de OTP com suporte a 8 dígitos do Supabase */}
+        <form onSubmit={handleVerify} className="space-y-4 sm:space-y-5">
           <div>
-            <div className="flex items-center justify-center gap-2 sm:gap-2.5" onPaste={handlePaste}>
+            <div
+              className="flex items-center justify-center gap-1.5 sm:gap-2"
+              onPaste={handlePaste}
+            >
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -190,9 +247,9 @@ export function OtpVerificationModal({
                   autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
+                  onChange={(e) => handleDigitChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-black rounded-xl border transition-all duration-150 focus:outline-none select-none ${
+                  className={`w-9 sm:w-11 h-12 sm:h-14 text-center text-lg sm:text-2xl font-black rounded-xl border transition-all duration-150 focus:outline-none select-none ${
                     digit
                       ? 'border-ucm-emerald bg-emerald-50/20 text-slate-900 focus:ring-2 focus:ring-ucm-emerald'
                       : 'border-slate-300 bg-white text-slate-900 focus:border-ucm-emerald focus:ring-2 focus:ring-ucm-emerald/40'
@@ -201,27 +258,40 @@ export function OtpVerificationModal({
               ))}
             </div>
 
-            {/* Espaço reservado para mensagem de erro sem salto de layout (Zero CLS) */}
-            <div className="min-h-[24px] mt-3 flex items-center justify-center text-center px-2">
+            {/* Ações Rápidas: Limpar Código + Mensagem de Erro/Dica Sem CLS */}
+            <div className="flex items-center justify-between mt-2.5 px-1">
+              <span className="text-[11px] text-slate-400">
+                {otpCode.length > 0 ? `${otpCode.length}/${OTP_LENGTH} algarismos` : 'Pode digitar ou colar o código'}
+              </span>
+              {otpCode.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-[11px] font-semibold text-slate-500 hover:text-rose-600 flex items-center transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" />
+                  <span>Limpar</span>
+                </button>
+              )}
+            </div>
+
+            {/* Feedback de erro */}
+            <div className="min-h-[22px] mt-1 flex items-center justify-center text-center px-2">
               {errorMessage ? (
                 <p className="text-[11px] font-bold text-rose-600 flex items-center animate-in fade-in duration-200">
                   <AlertCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
                   <span>{errorMessage}</span>
                 </p>
-              ) : (
-                <span className="text-[11px] text-slate-400">
-                  Pode digitar ou colar o código recebido no e-mail
-                </span>
-              )}
+              ) : null}
             </div>
           </div>
 
           {/* Botão de Verificação */}
           <button
             type="submit"
-            disabled={!isComplete || isSubmitting}
+            disabled={!isValidLength || isSubmitting}
             className={`w-full py-3.5 px-4 font-bold rounded-2xl text-sm min-h-[48px] shadow-md transition-all duration-200 active:scale-[0.97] flex items-center justify-center relative cursor-pointer ${
-              !isComplete || isSubmitting
+              !isValidLength || isSubmitting
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed active:scale-100'
                 : 'bg-ucm-emerald hover:bg-ucm-darkEmerald text-white shadow-ucm-emerald/20 hover:shadow-lg'
             }`}
@@ -239,7 +309,7 @@ export function OtpVerificationModal({
           </button>
 
           {/* Temporizador de Reenvio e Ação de Correção de E-mail */}
-          <div className="pt-3 border-t border-slate-100 space-y-3 text-center">
+          <div className="pt-3 border-t border-slate-100 space-y-2.5 text-center">
             <div>
               {countdown > 0 ? (
                 <p className="text-xs text-slate-500">
