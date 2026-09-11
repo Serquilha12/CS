@@ -3,7 +3,7 @@ import {
   ShieldAlert, ShieldCheck, Users, ShoppingBag, DollarSign, 
   AlertTriangle, EyeOff, Check, Ban, Search, FileText, 
   RefreshCw, Lock, ExternalLink, Flag, Info, UserX, UserCheck, Clock, X,
-  Trash2, RotateCcw
+  Trash2, RotateCcw, CheckCircle2
 } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -291,11 +291,11 @@ export default function AdminDashboard() {
 
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-1">
           <div className="flex items-center justify-between">
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-            <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full">Economia</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+            <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full">Sucesso</span>
           </div>
-          <p className="text-2xl font-black text-slate-900">{stats.total_saved_mzn || 0} MZN</p>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Poupados pelos Alunos</p>
+          <p className="text-2xl font-black text-slate-900">{stats.total_completed_sales || 0}</p>
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Transações Concluídas</p>
         </div>
       </div>
 
