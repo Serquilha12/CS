@@ -98,11 +98,11 @@ class AuthService {
       };
     }
 
-    // Fluxo padrão: Requer validação do código OTP de 6 dígitos enviado por e-mail
+    // Fluxo padrão: Requer validação do código OTP de 4 dígitos enviado por e-mail
     return {
       requiresOtp: true,
       email: normalizedEmail,
-      message: 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
+      message: 'Código de verificação de 4 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
     };
   }
 
@@ -110,8 +110,8 @@ class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
     const cleanToken = (token || '').toString().trim().replace(/\D/g, '');
 
-    if (!cleanToken || cleanToken.length < 6) {
-      const shortErr = new Error('Introduza o código de verificação completo recebido no e-mail.');
+    if (!cleanToken || cleanToken.length < 4) {
+      const shortErr = new Error('Introduza o código de verificação completo de 4 dígitos recebido no e-mail.');
       shortErr.statusCode = 400;
       throw shortErr;
     }

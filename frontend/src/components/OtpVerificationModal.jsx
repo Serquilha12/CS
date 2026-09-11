@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Mail, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2, X, RotateCcw } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
-const OTP_LENGTH = 8; // Supabase Auth GoTrue padrão de 8 dígitos para este projeto
+const OTP_LENGTH = 4; // Código de verificação OTP de 4 dígitos
 
 export function OtpVerificationModal({
   isOpen,
@@ -49,8 +49,8 @@ export function OtpVerificationModal({
   if (!isOpen) return null;
 
   const otpCode = otp.join('');
-  // Aceita 8 dígitos (padrão Supabase) ou 6 dígitos
-  const isValidLength = otpCode.length === OTP_LENGTH || otpCode.length === 6;
+  // Aceita código de 4 dígitos
+  const isValidLength = otpCode.length === OTP_LENGTH;
 
   function handleDigitChange(index, value) {
     if (!value) {
@@ -222,7 +222,7 @@ export function OtpVerificationModal({
             Verificar Código Institucional
           </h2>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed px-2">
-            Introduza o código recebido no seu e-mail institucional:
+            Introduza o código de 4 dígitos recebido no seu e-mail institucional:
           </p>
           <div className="inline-flex items-center space-x-1.5 mt-2 px-3 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-800 border border-slate-200">
             <Mail className="w-3.5 h-3.5 text-ucm-emerald" />
@@ -230,11 +230,11 @@ export function OtpVerificationModal({
           </div>
         </div>
 
-        {/* Formulário de OTP com suporte a 8 dígitos do Supabase */}
+        {/* Formulário de OTP com 4 dígitos */}
         <form onSubmit={handleVerify} className="space-y-4 sm:space-y-5">
           <div>
             <div
-              className="flex items-center justify-center gap-1.5 sm:gap-2"
+              className="flex items-center justify-center gap-2.5 sm:gap-3.5"
               onPaste={handlePaste}
             >
               {otp.map((digit, index) => (
@@ -249,9 +249,9 @@ export function OtpVerificationModal({
                   value={digit}
                   onChange={(e) => handleDigitChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-9 sm:w-11 h-12 sm:h-14 text-center text-lg sm:text-2xl font-black rounded-xl border transition-all duration-150 focus:outline-none select-none ${
+                  className={`w-14 sm:w-16 h-16 sm:h-18 text-center text-2xl sm:text-3xl font-black rounded-2xl border transition-all duration-150 focus:outline-none select-none shadow-xs ${
                     digit
-                      ? 'border-ucm-emerald bg-emerald-50/20 text-slate-900 focus:ring-2 focus:ring-ucm-emerald'
+                      ? 'border-ucm-emerald bg-emerald-50/25 text-slate-900 focus:ring-2 focus:ring-ucm-emerald'
                       : 'border-slate-300 bg-white text-slate-900 focus:border-ucm-emerald focus:ring-2 focus:ring-ucm-emerald/40'
                   } ${errorMessage ? 'border-rose-400 bg-rose-50/30' : ''}`}
                 />
@@ -259,9 +259,9 @@ export function OtpVerificationModal({
             </div>
 
             {/* Ações Rápidas: Limpar Código + Mensagem de Erro/Dica Sem CLS */}
-            <div className="flex items-center justify-between mt-2.5 px-1">
+            <div className="flex items-center justify-between mt-3 px-2">
               <span className="text-[11px] text-slate-400">
-                {otpCode.length > 0 ? `${otpCode.length}/${OTP_LENGTH} algarismos` : 'Pode digitar ou colar o código'}
+                {otpCode.length > 0 ? `${otpCode.length}/${OTP_LENGTH} algarismos` : 'Pode digitar ou colar o código de 4 dígitos'}
               </span>
               {otpCode.length > 0 && (
                 <button
