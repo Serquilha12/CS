@@ -52,10 +52,52 @@ const listingRateLimiter = rateLimit({
   statusCode: 429
 });
 
+// Limitador para envio de mensagens no chat (anti-spam / anti-flood)
+const chatMessageLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 60, // Limite de 60 mensagens por minuto
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Está a enviar mensagens com demasiada rapidez. Aguarde alguns segundos.'
+  },
+  statusCode: 429
+});
+
+// Limitador para denúncias à moderação (evita assédio e flood na fila de denúncias)
+const reportRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 10, // Limite de 10 denúncias por hora
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Limite de denúncias por hora atingido. Se necessita de assistência imediata, contacte a administração.'
+  },
+  statusCode: 429
+});
+
+// Limitador para carregamento de fotografias (evita saturação de armazenamento e tráfego)
+const uploadRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 30, // Limite de 30 fotos por hora
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Limite de uploads por hora atingido. Tente novamente mais tarde.'
+  },
+  statusCode: 429
+});
+
 module.exports = {
   loginLimiter,
   passwordResetLimiter,
   generalAuthLimiter,
   authRateLimiter: generalAuthLimiter,
-  listingRateLimiter
+  listingRateLimiter,
+  chatMessageLimiter,
+  reportRateLimiter,
+  uploadRateLimiter
 };

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Tag, MapPin, Calendar, MessageSquare, ShoppingCart, UserCheck, ArrowLeft, 
-  Share2, Flag, Loader2, CheckCircle2, ShieldCheck, X, DollarSign, Repeat 
+  Share2, Flag, Loader2, CheckCircle2, ShieldCheck, X, DollarSign, Repeat,
+  Trash2, ShieldAlert
 } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -21,12 +22,13 @@ const SAFE_MEETING_POINTS = [
 export function ListingDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, isAdmin } = useContext(AuthContext);
   const { showToast } = useToast();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Estados do Modal de Reserva / Ponto de Encontro
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,6 +37,31 @@ export function ListingDetail() {
   const [proposedPrice, setProposedPrice] = useState('');
   const [exchangeItemProposal, setExchangeItemProposal] = useState('');
   const [initialMessage, setInitialMessage] = useState('');
+
+  const isUserAdmin = isAdmin || user?.role === 'admin';
+  const isOwner = listing && user && listing.owner_id === user.id;
+
+  async function handleDeleteListing() {
+    if (!listing) return;
+    const confirmMsg = isUserAdmin && !isOwner
+      ? 'Atenção (Moderação de Administrador):\nTem certeza de que pretende apagar este anúncio do sistema? Esta ação removerá o artigo do feed do Marketplace.'
+      : 'Tem certeza de que pretende apagar o seu anúncio? Esta ação não pode ser desfeita.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setDeleting(true);
+      const res = await fetchApi(`/listings/${listing.id}`, { method: 'DELETE' });
+      if (res.success) {
+        showToast(isUserAdmin && !isOwner ? 'Anúncio removido com sucesso pela moderação.' : 'O seu anúncio foi removido com sucesso.', 'info');
+        navigate(isUserAdmin ? '/admin' : '/marketplace');
+      }
+    } catch (err) {
+      showToast(err.message || 'Erro ao apagar anúncio.', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     loadListing();
@@ -167,8 +194,6 @@ export function ListingDetail() {
 
   if (!listing) return null;
 
-  const isOwner = listing.owner_id === user?.id;
-
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4 pb-28">
       {/* Cabeçalho de Navegação Móvel com Voltar (ArrowLeft), Partilhar (Share2) e Denunciar (Flag) */}
@@ -192,14 +217,28 @@ export function ListingDetail() {
             <Share2 className="w-4 h-4 text-slate-600" />
           </button>
 
-          {/* Botão Discreto de Denúncia */}
-          <button
-            onClick={handleReport}
-            className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200"
-            title="Denunciar Anúncio Impróprio"
-          >
-            <Flag className="w-4 h-4" />
-          </button>
+          {/* Botão de Apagar Anúncio (para Administrador ou Proprietário) */}
+          {(isUserAdmin || isOwner) && (
+            <button
+              onClick={handleDeleteListing}
+              disabled={deleting}
+              className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-rose-200 shadow-xs"
+              title={isUserAdmin && !isOwner ? 'Apagar Anúncio (Moderação Admin)' : 'Apagar Meu Anúncio'}
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin text-rose-600" /> : <Trash2 className="w-4 h-4" />}
+            </button>
+          )}
+
+          {/* Botão Discreto de Denúncia (para outros estudantes) */}
+          {!isOwner && (
+            <button
+              onClick={handleReport}
+              className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-slate-200"
+              title="Denunciar Anúncio Impróprio"
+            >
+              <Flag className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -253,6 +292,62 @@ export function ListingDetail() {
           </p>
         </div>
 
+        {/* PAINEL DE MODERAÇÃO ADMINISTRATIVA (Exibido para Admin) */}
+        {isUserAdmin && (
+          <div className="pt-4 border-t border-rose-100 bg-rose-50/80 p-4 rounded-2xl border border-rose-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ShieldAlert className="w-5 h-5 text-rose-600" />
+                <span className="text-xs font-black text-rose-900 uppercase tracking-wider">Moderação de Administrador</span>
+              </div>
+              <span className="text-[10px] font-black px-2 py-0.5 bg-rose-600 text-white rounded-md uppercase">Acesso Admin</span>
+            </div>
+            <p className="text-xs text-rose-800 leading-relaxed">
+              Como administrador UCM, tem autoridade para apagar este anúncio do catálogo caso viole as diretrizes de convivência ou segurança institucional.
+            </p>
+            <button
+              onClick={handleDeleteListing}
+              disabled={deleting}
+              className="w-full py-3 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold rounded-xl text-xs flex items-center justify-center space-x-2 transition-all min-h-[44px] shadow-md shadow-rose-600/25 cursor-pointer"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  <span>A apagar anúncio...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-1.5" />
+                  <span>Apagar Anúncio do Marketplace</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Botão de Apagar para o Dono do Anúncio (quando não for admin) */}
+        {isOwner && !isUserAdmin && (
+          <div className="pt-4 border-t border-slate-100">
+            <button
+              onClick={handleDeleteListing}
+              disabled={deleting}
+              className="w-full py-3 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition-all min-h-[44px] cursor-pointer"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  <span>A apagar...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-1.5 text-rose-600" />
+                  <span>Apagar Meu Anúncio</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Botões de Ação Inline (Desktop) */}
         {!isOwner && (
           <div className="hidden sm:flex pt-4 border-t border-slate-100 space-x-2">
@@ -276,26 +371,48 @@ export function ListingDetail() {
       </div>
 
       {/* BARRA FIXA DE AÇÃO NO FUNDO DO ECRÃ EM TELEMÓVEL (MOBILE BOTTOM CTA) */}
-      {!isOwner && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex space-x-2 shadow-2xl">
-          <button
-            onClick={handleOpenReservationModal}
-            disabled={reserving}
-            className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center min-h-[48px] active:scale-95"
-          >
-            {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
-            Reservar / Combinar Encontro
-          </button>
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex space-x-2 shadow-2xl">
+        {!isOwner ? (
+          <>
+            <button
+              onClick={handleOpenReservationModal}
+              disabled={reserving}
+              className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center min-h-[48px] active:scale-95"
+            >
+              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
+              Reservar / Combinar Encontro
+            </button>
 
+            <button
+              onClick={() => navigate('/chat', { state: { listing } })}
+              className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[48px]"
+              title="Chat Privado"
+            >
+              <MessageSquare className="w-5 h-5 text-blue-900" />
+            </button>
+
+            {isUserAdmin && (
+              <button
+                onClick={handleDeleteListing}
+                disabled={deleting}
+                className="py-3.5 px-4 bg-rose-50 text-rose-700 border border-rose-300 font-bold rounded-2xl text-xs flex items-center justify-center min-h-[48px]"
+                title="Apagar Anúncio (Admin)"
+              >
+                <Trash2 className="w-5 h-5 text-rose-600" />
+              </button>
+            )}
+          </>
+        ) : (
           <button
-            onClick={() => navigate('/chat', { state: { listing } })}
-            className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center min-h-[48px]"
-            title="Chat Privado"
+            onClick={handleDeleteListing}
+            disabled={deleting}
+            className="flex-1 py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center min-h-[48px]"
           >
-            <MessageSquare className="w-5 h-5 text-blue-900" />
+            {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Trash2 className="w-4 h-4 mr-1.5" />}
+            Apagar Meu Anúncio
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ─── MODAL DE RESERVA E PONTO DE ENCONTRO SEGURO UCM ─── */}
       {isModalOpen && (

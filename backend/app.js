@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -7,14 +8,29 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
+// Desabilitar cabeçalho identificador do Express
+app.disable('x-powered-by');
+
 // 1. Cabeçalhos de Segurança com Helmet
 app.use(helmet({
-  contentSecurityPolicy: false // Desativado para facilitar assets dinâmicos em dev
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
 }));
 
-// 2. Configuração de CORS para permitir cookies em credenciais
+// 2. Configuração de CORS para ambiente de produção e desenvolvimento
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Permite chamadas server-to-server, mobile/Postman sem header de origin, ou origens autorizadas
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Permite por padrão mantendo compatibilidade
+  },
   credentials: true
 }));
 

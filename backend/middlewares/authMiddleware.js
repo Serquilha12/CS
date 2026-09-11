@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { supabase, supabaseAdmin } = require('../config/supabase');
+const { isAdminEmail } = require('../config/constants');
 
 async function authMiddleware(req, res, next) {
   try {
@@ -19,18 +20,20 @@ async function authMiddleware(req, res, next) {
     } catch (e) {}
 
     if (!user) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026');
-        if (decoded) {
-          user = {
-            id: decoded.id,
-            email: decoded.email,
-            role: decoded.role || 'student',
-            course: decoded.course || '',
-            full_name: decoded.full_name || 'Estudante UCM'
-          };
-        }
-      } catch (jwtErr) {}
+      if (process.env.JWT_SECRET) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          if (decoded && decoded.id) {
+            user = {
+              id: decoded.id,
+              email: decoded.email,
+              role: decoded.role || 'student',
+              course: decoded.course || '',
+              full_name: decoded.full_name || 'Estudante UCM'
+            };
+          }
+        } catch (jwtErr) {}
+      }
     }
 
     if (!user) {
@@ -50,7 +53,7 @@ async function authMiddleware(req, res, next) {
       if (dbProfile) {
         profile = dbProfile;
       } else if (user.email) {
-        // 2. Se o ID for legado/antigo mas o e-mail existir na BD, reconcilia para o ID real
+        // 2. Se o ID for legado mas o e-mail existir na BD, reconcilia para o ID real
         const { data: profileByEmail } = await supabaseAdmin
           .from('profiles')
           .select('*')
@@ -59,11 +62,15 @@ async function authMiddleware(req, res, next) {
 
         if (profileByEmail) {
           profile = profileByEmail;
-          user.id = profileByEmail.id; // Atualiza o ID em tempo de execução para evitar falha de Foreign Key
+          user.id = profileByEmail.id;
         }
       }
     } catch (e) {
       console.warn('[AUTH MIDDLEWARE PROFILE LOOKUP]:', e.message);
+    }
+
+    if (!profile) {
+      return res.status(401).json({ success: false, error: 'Sessão inválida ou perfil de utilizador não encontrado.' });
     }
 
     if (profile?.status === 'suspended') {
@@ -73,10 +80,18 @@ async function authMiddleware(req, res, next) {
       });
     }
 
+    const isSystemAdmin = isAdminEmail(user.email) || profile?.role === 'admin' || user.role === 'admin';
+    const effectiveRole = isSystemAdmin ? 'admin' : (profile?.role || user.role || 'student');
+
+    // Sincronizar role no banco em background se for admin por e-mail mas estiver desatualizado
+    if (isSystemAdmin && profile && profile.role !== 'admin') {
+      supabaseAdmin.from('profiles').update({ role: 'admin' }).eq('id', profile.id).then(() => {}).catch(() => {});
+    }
+
     req.user = {
       id: profile?.id || user.id,
       email: user.email,
-      role: profile?.role || user.role || 'student',
+      role: effectiveRole,
       status: profile?.status || 'active',
       course: profile?.course || user.course || '',
       full_name: profile?.full_name || user.full_name || ''

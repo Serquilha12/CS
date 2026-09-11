@@ -6,15 +6,15 @@ async function seedUsers() {
   
   const testUsers = [
     {
-      email: 'estudante.teste@ucm.ac.mz',
-      password: 'Senha123!',
+      email: process.env.TEST_STUDENT_EMAIL || 'estudante.teste@ucm.ac.mz',
+      password: process.env.TEST_STUDENT_PASSWORD,
       full_name: 'Estudante Teste',
       course: 'Licenciatura em Tecnologias da Informação',
       role: 'student'
     },
     {
-      email: 'admin.pemba@ucm.ac.mz',
-      password: 'AdminPass123!',
+      email: process.env.TEST_ADMIN_EMAIL || 'admin.pemba@ucm.ac.mz',
+      password: process.env.TEST_ADMIN_PASSWORD,
       full_name: 'Administrador Pemba',
       course: 'Licenciatura em Tecnologias da Informação',
       role: 'admin'
@@ -22,6 +22,10 @@ async function seedUsers() {
   ];
 
   for (const tu of testUsers) {
+    if (!tu.password) {
+      console.log(`[AVISO]: Senha não definida nas variáveis de ambiente para ${tu.email}. Ignorando criação.`);
+      continue;
+    }
     console.log(`\nA processar utilizador: ${tu.email}`);
     
     const { data: usersList, error: listErr } = await supabaseAdmin.auth.admin.listUsers();

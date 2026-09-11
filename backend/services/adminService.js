@@ -142,11 +142,104 @@ class AdminService {
     return data;
   }
 
-  async removeListing(adminId, listingId, reason = 'Violação dos Termos UCM') {
-    // Define status = 'suspended' conforme especificado na política de moderação
+  async deleteListing(adminId, listingId, reason = 'Remoção direta pelo Administrador') {
+    // 1. Soft delete preservando integridade referencial
     const { data, error } = await supabaseAdmin
       .from('listings')
-      .update({ status: 'suspended', updated_at: new Date() })
+      .update({
+        deleted_at: new Date().toISOString(),
+        status: 'removed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', listingId)
+      .select('*, profiles:owner_id(full_name, email)')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // 2. Resolver denúncias pendentes associadas a este anúncio
+    try {
+      await supabaseAdmin
+        .from('reports')
+        .update({ status: 'resolved', updated_at: new Date().toISOString() })
+        .eq('listing_id', listingId);
+    } catch (e) {
+      console.warn('[RESOLVE REPORT WARNING]:', e.message);
+    }
+
+    // 3. Registo de auditoria imutável (admin_audit_logs)
+    const { data: adminProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', adminId)
+      .single();
+
+    try {
+      await supabaseAdmin.from('admin_audit_logs').insert({
+        admin_id: adminId,
+        action: 'DELETE_LISTING',
+        target_id: listingId,
+        details: {
+          admin_email: adminProfile?.email || 'admin@ucm.ac.mz',
+          title: data.title,
+          owner_email: data.profiles?.email,
+          reason
+        }
+      });
+    } catch (e) {
+      console.warn('[AUDIT LOG WARNING]:', e.message);
+    }
+
+    return data;
+  }
+
+  async reactivateListing(adminId, listingId) {
+    const { data, error } = await supabaseAdmin
+      .from('listings')
+      .update({
+        deleted_at: null,
+        status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', listingId)
+      .select('*, profiles:owner_id(full_name, email)')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const { data: adminProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', adminId)
+      .single();
+
+    try {
+      await supabaseAdmin.from('admin_audit_logs').insert({
+        admin_id: adminId,
+        action: 'REACTIVATE_LISTING',
+        target_id: listingId,
+        details: {
+          admin_email: adminProfile?.email || 'admin@ucm.ac.mz',
+          title: data.title,
+          owner_email: data.profiles?.email
+        }
+      });
+    } catch (e) {
+      console.warn('[AUDIT LOG WARNING]:', e.message);
+    }
+
+    return data;
+  }
+
+  async removeListing(adminId, listingId, reason = 'Violação dos Termos UCM') {
+    // Define status = 'removed' em conformidade estrita com o constraint listings_status_check
+    const { data, error } = await supabaseAdmin
+      .from('listings')
+      .update({
+        status: 'removed',
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .eq('id', listingId)
       .select('*, profiles:owner_id(full_name, email)')
       .single();
@@ -157,7 +250,7 @@ class AdminService {
     try {
       await supabaseAdmin
         .from('reports')
-        .update({ status: 'resolved', updated_at: new Date() })
+        .update({ status: 'resolved', updated_at: new Date().toISOString() })
         .eq('listing_id', listingId);
     } catch (e) {
       console.warn('[RESOLVE REPORT WARNING]:', e.message);
@@ -190,20 +283,28 @@ class AdminService {
     return data;
   }
 
+  async suspendListing(adminId, listingId, reason) {
+    return this.removeListing(adminId, listingId, reason);
+  }
+
   async suspendUser(adminId, userId, reason = 'Comportamento Inadequado / Fraude') {
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .update({ status: 'suspended', updated_at: new Date() })
+      .update({ status: 'suspended', updated_at: new Date().toISOString() })
       .eq('id', userId)
       .select()
       .single();
 
     if (error) throw new Error(error.message);
 
-    // Ocultar e suspender do feed todos os anúncios associados ao utilizador suspenso (status='suspended')
+    // Ocultar do feed todos os anúncios associados ao utilizador suspenso (status='removed')
     await supabaseAdmin
       .from('listings')
-      .update({ status: 'suspended', updated_at: new Date() })
+      .update({
+        status: 'removed',
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .eq('owner_id', userId);
 
     // Resolver denúncias pendentes associadas a este utilizador

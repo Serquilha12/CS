@@ -150,12 +150,16 @@ class ReservationService {
     let isDoubleConfirmed = false;
 
     if (hasDoubleColumns) {
-      if (reservation.buyer_id === userId || roleType === 'buyer') {
+      // Validação estrita de autorização (Anti-IDOR):
+      // Apenas o comprador real pode confirmar como comprador e o vendedor real como vendedor
+      if (reservation.buyer_id === userId) {
         updatePayload.buyer_confirmed = true;
-      } else if (reservation.seller_id === userId || roleType === 'seller') {
+      } else if (reservation.seller_id === userId) {
         updatePayload.seller_confirmed = true;
       } else {
-        throw new Error('Sem autorização para confirmar esta transação.');
+        const authErr = new Error('Sem autorização para confirmar esta transação.');
+        authErr.statusCode = 403;
+        throw authErr;
       }
 
       isDoubleConfirmed =

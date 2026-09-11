@@ -1,42 +1,12 @@
 const jwt = require('jsonwebtoken');
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const { isAdminEmail } = require('../config/constants');
-const JWT_SECRET = process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026';
-
-const TEST_ACCOUNTS = {
-  'estudante.teste@ucm.ac.mz': {
-    password: 'Senha123!',
-    user: {
-      id: 'ad0cb5fb-7766-4ad7-ac12-49bbea754e6f',
-      email: 'estudante.teste@ucm.ac.mz',
-      user_metadata: { full_name: 'Estudante Teste', course: 'Licenciatura em Tecnologias da Informação' }
-    },
-    profile: {
-      id: 'ad0cb5fb-7766-4ad7-ac12-49bbea754e6f',
-      email: 'estudante.teste@ucm.ac.mz',
-      full_name: 'Estudante Teste',
-      course: 'Licenciatura em Tecnologias da Informação',
-      campus: 'Campus de Pemba',
-      role: 'student'
-    }
-  },
-  'admin.pemba@ucm.ac.mz': {
-    password: 'AdminPass123!',
-    user: {
-      id: '083a72fd-1766-4ecc-aac0-0bd8588a4d9f',
-      email: 'admin.pemba@ucm.ac.mz',
-      user_metadata: { full_name: 'Administrador UCM Pemba', course: 'Licenciatura em Tecnologias da Informação' }
-    },
-    profile: {
-      id: '083a72fd-1766-4ecc-aac0-0bd8588a4d9f',
-      email: 'admin.pemba@ucm.ac.mz',
-      full_name: 'Administrador UCM Pemba',
-      course: 'Licenciatura em Tecnologias da Informação',
-      campus: 'Campus de Pemba',
-      role: 'admin'
-    }
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Configuração crítica de segurança: JWT_SECRET não foi configurado nas variáveis de ambiente.');
   }
-};
+  return '722fb836b7a614db692dffb072f5f05a9b5cc5fe00d6d2e75cee4161cadb6148';
+})();
 
 class AuthService {
   async registerUser({ email, password, full_name, course, campus }) {
@@ -264,51 +234,6 @@ class AuthService {
   async loginUser({ email, password }) {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Verificar contas pré-definidas de teste do PRD
-    const testAcc = TEST_ACCOUNTS[normalizedEmail];
-    if (testAcc && testAcc.password === password) {
-      let realUserId = testAcc.profile.id;
-      try {
-        const { data: dbProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('id, role')
-          .eq('email', normalizedEmail)
-          .single();
-        if (dbProfile?.id) {
-          realUserId = dbProfile.id;
-        } else {
-          await supabaseAdmin.from('profiles').upsert({
-            id: realUserId,
-            email: normalizedEmail,
-            full_name: testAcc.profile.full_name,
-            course: testAcc.profile.course,
-            campus: testAcc.profile.campus,
-            role: testAcc.profile.role
-          });
-        }
-      } catch (e) {
-        console.warn('[AUTH TEST ACC SYNC]:', e.message);
-      }
-
-      const token = jwt.sign(
-        {
-          id: realUserId,
-          email: testAcc.profile.email,
-          role: testAcc.profile.role,
-          full_name: testAcc.profile.full_name,
-          course: testAcc.profile.course
-        },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      return {
-        session: { access_token: token },
-        user: { ...testAcc.user, id: realUserId },
-        profile: { ...testAcc.profile, id: realUserId }
-      };
-    }
-
     let data = null;
     let error = null;
 
@@ -455,12 +380,9 @@ class AuthService {
           throw new Error('Não foi possível gerar as instruções de recuperação para este e-mail.');
         }
 
-        const actionLink = linkData?.properties?.action_link;
-        console.log(`\n=======================================================`);
-        console.log(`🔑 [LINK DE RECUPERAÇÃO UCM PEMBA DISPONÍVEL]`);
-        console.log(`📧 Destinatário: ${normalizedEmail}`);
-        console.log(`🔗 Link de Acesso: ${actionLink}`);
-        console.log(`=======================================================\n`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[AUTH RECOVERY]: Link de recuperação gerado para ${normalizedEmail}`);
+        }
       } catch (adminEx) {
         console.error('[FORGOT PASSWORD ADMIN EXCEPTION]:', adminEx.message);
         throw adminEx;

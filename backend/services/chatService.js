@@ -36,13 +36,7 @@ class ChatService {
       .maybeSingle();
 
     if (!senderProfile) {
-      const { data: defaultProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('id')
-        .in('email', ['admin.pemba@ucm.ac.mz', 'estudante.teste@ucm.ac.mz'])
-        .limit(1)
-        .maybeSingle();
-      if (defaultProfile?.id) validSenderId = defaultProfile.id;
+      throw new Error('Perfil de utilizador não encontrado. Inicie sessão novamente.');
     }
 
     // 3. Garantir que o destinatário (receiver) existe em profiles
@@ -61,6 +55,10 @@ class ChatService {
       if (listing?.owner_id) {
         validReceiverId = listing.owner_id;
       }
+    }
+
+    if (!validReceiverId) {
+      throw new Error('Destinatário da mensagem não identificado.');
     }
 
     // 4. Persistir mensagem na base de dados com cliente admin autenticado
@@ -90,8 +88,7 @@ class ChatService {
 
     const { data: curP } = await supabaseAdmin.from('profiles').select('id').eq('id', validCurrentId).maybeSingle();
     if (!curP) {
-      const { data: fallbackP } = await supabaseAdmin.from('profiles').select('id').limit(1).maybeSingle();
-      if (fallbackP?.id) validCurrentId = fallbackP.id;
+      throw new Error('Perfil de utilizador não encontrado.');
     }
 
     const { data: othP } = await supabaseAdmin.from('profiles').select('id').eq('id', validOtherId).maybeSingle();

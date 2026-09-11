@@ -21,8 +21,8 @@ This document is optimized for automated AI agent testing in **TestSprite** to g
 | Role | Email Domain Constraint | Capabilities | Test Credentials |
 | :--- | :--- | :--- | :--- |
 | **Unauthenticated Guest** | None | View landing page, open login/register modals, test email validation | N/A |
-| **Student User** | `@ucm.ac.mz` (Mandatory) | Browse marketplace, post listings, reserve items, chat in real-time, view profile stats | `estudante.teste@ucm.ac.mz` / `Senha123!` |
-| **Administrator (Moderator)** | `@ucm.ac.mz` + `role: admin` | Moderate listings, manage flagged items, view platform analytics at `/admin` | `admin.pemba@ucm.ac.mz` / `AdminPass123!` |
+| **Student User** | `@ucm.ac.mz` (Mandatory) | Browse marketplace, post listings, reserve items, chat in real-time, view profile stats | `estudante.teste@ucm.ac.mz` / (Credencial privada) |
+| **Administrator (Moderator)** | `@ucm.ac.mz` + `role: admin` | Moderate listings, manage flagged items, view platform analytics at `/admin` | `admin.pemba@ucm.ac.mz` / (Credencial privada) |
 
 ---
 

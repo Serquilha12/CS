@@ -1,8 +1,8 @@
+require('dotenv').config();
 const http = require('http');
 const app = require('./app');
 const socketManager = require('./websocket/socketManager');
 const reservationTimeoutService = require('./services/reservationTimeoutService');
-require('dotenv').config();
 
 const PORT = process.env.PORT || 5000;
 

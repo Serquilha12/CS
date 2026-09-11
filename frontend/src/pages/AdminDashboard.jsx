@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, ShieldCheck, Users, ShoppingBag, DollarSign, 
   AlertTriangle, EyeOff, Check, Ban, Search, FileText, 
-  RefreshCw, Lock, ExternalLink, Flag, Info, UserX, UserCheck, Clock, X
+  RefreshCw, Lock, ExternalLink, Flag, Info, UserX, UserCheck, Clock, X,
+  Trash2, RotateCcw
 } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
@@ -31,6 +32,33 @@ export default function AdminDashboard() {
       showToast(err.message || 'Erro ao carregar dados do painel de administração.', 'error');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteListing(listingId) {
+    if (!window.confirm('ATENÇÃO: Pretende apagar definitivamente este anúncio da plataforma?')) return;
+    try {
+      const res = await fetchApi(`/admin/listings/${listingId}`, { method: 'DELETE' });
+      if (res.success) {
+        showToast('Anúncio apagado com sucesso pelo administrador.', 'info');
+        if (selectedReport) setSelectedReport(null);
+        loadDashboard();
+      }
+    } catch (err) {
+      showToast(err.message || 'Erro ao apagar anúncio.', 'error');
+    }
+  }
+
+  async function handleReactivateListing(listingId) {
+    if (!window.confirm('Pretende reativar este anúncio e torná-lo novamente visível no feed do Marketplace?')) return;
+    try {
+      const res = await fetchApi(`/admin/listings/${listingId}/reactivate`, { method: 'PUT' });
+      if (res.success) {
+        showToast('Anúncio reativado com sucesso no feed público!', 'success');
+        loadDashboard();
+      }
+    } catch (err) {
+      showToast(err.message || 'Erro ao reativar anúncio.', 'error');
     }
   }
 
@@ -392,12 +420,22 @@ export default function AdminDashboard() {
                     </button>
 
                     {report.listing_id && (
-                      <button
-                        onClick={() => handleSuspendListing(report.listing_id)}
-                        className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center transition-colors border border-rose-200 min-h-[44px]"
-                      >
-                        <EyeOff className="w-4 h-4 mr-1.5" /> Suspender Item
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleDeleteListing(report.listing_id)}
+                          className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs flex items-center transition-colors shadow-xs min-h-[44px]"
+                          title="Apagar Anúncio Definitivamente"
+                        >
+                          <Trash2 className="w-4 h-4 mr-1.5" /> Apagar Item
+                        </button>
+
+                        <button
+                          onClick={() => handleSuspendListing(report.listing_id)}
+                          className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center transition-colors border border-rose-200 min-h-[44px]"
+                        >
+                          <EyeOff className="w-4 h-4 mr-1.5" /> Suspender
+                        </button>
+                      </>
                     )}
 
                     {report.status === 'pending' && (
@@ -449,19 +487,40 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="flex items-center space-x-2 shrink-0">
-                  {item.status !== 'removed' && item.status !== 'suspended' && (
+                  {/* Botão de Apagar Anúncio (Disponível sempre para o Administrador) */}
+                  <button
+                    onClick={() => handleDeleteListing(item.id)}
+                    className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center transition-all shadow-xs min-h-[44px]"
+                    title="Apagar Anúncio Definitivamente do Sistema"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" /> Apagar
+                  </button>
+
+                  {/* Alternância: Ocultar / Suspender vs Reativar */}
+                  {item.status !== 'removed' && item.status !== 'suspended' ? (
                     <button
                       onClick={() => handleSuspendListing(item.id)}
-                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs flex items-center transition-colors border border-rose-200 min-h-[44px]"
+                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl text-xs flex items-center transition-colors border border-rose-200 min-h-[44px]"
+                      title="Ocultar do Feed do Marketplace"
                     >
                       <EyeOff className="w-4 h-4 mr-1.5" /> Ocultar do Feed
                     </button>
+                  ) : (
+                    <button
+                      onClick={() => handleReactivateListing(item.id)}
+                      className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold rounded-xl text-xs flex items-center transition-colors min-h-[44px]"
+                      title="Reativar Anúncio no Feed"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1.5" /> Reativar
+                    </button>
                   )}
+
                   <a
                     href={`/item/${item.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="px-3 py-2 bg-platinum hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center min-h-[44px]"
+                    title="Ver página pública do anúncio"
                   >
                     <ExternalLink className="w-4 h-4 mr-1 text-persian" /> Ver Item
                   </a>
@@ -582,11 +641,13 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 px-3">
                         <span className={`px-2 py-0.5 text-[10px] font-black rounded uppercase ${
-                          log.action === 'SUSPEND_LISTING'
+                          log.action === 'DELETE_LISTING'
+                            ? 'bg-rose-700 text-white'
+                            : log.action === 'SUSPEND_LISTING'
                             ? 'bg-rose-100 text-rose-800'
                             : log.action === 'SUSPEND_USER'
                             ? 'bg-rose-900 text-white'
-                            : log.action === 'REACTIVATE_USER'
+                            : log.action === 'REACTIVATE_LISTING' || log.action === 'REACTIVATE_USER'
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-slate-100 text-slate-700'
                         }`}>
@@ -648,7 +709,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
+            <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() => handleIgnoreReport(selectedReport.id)}
                 className="px-4 py-2.5 bg-platinum hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs min-h-[44px]"
@@ -657,12 +718,21 @@ export default function AdminDashboard() {
               </button>
 
               {selectedReport.listing_id && (
-                <button
-                  onClick={() => handleSuspendListing(selectedReport.listing_id)}
-                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/20 min-h-[44px]"
-                >
-                  Suspender Anúncio Instantaneamente
-                </button>
+                <>
+                  <button
+                    onClick={() => handleSuspendListing(selectedReport.listing_id)}
+                    className="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-xl text-xs min-h-[44px] flex items-center"
+                  >
+                    <EyeOff className="w-4 h-4 mr-1.5" /> Suspender
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteListing(selectedReport.listing_id)}
+                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-xl text-xs shadow-md shadow-rose-600/20 min-h-[44px] flex items-center"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" /> Apagar Definitivamente
+                  </button>
+                </>
               )}
             </div>
           </div>

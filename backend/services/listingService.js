@@ -190,7 +190,7 @@ class ListingService {
   async deleteListing(listingId, userId, userRole) {
     const { data: listing } = await supabaseAdmin
       .from('listings')
-      .select('owner_id, status')
+      .select('owner_id, status, title')
       .eq('id', listingId)
       .single();
 
@@ -211,6 +211,37 @@ class ListingService {
       .eq('id', listingId);
 
     if (error) throw new Error(error.message);
+
+    // Se a deleção foi realizada por um administrador em anúncio de terceiro, registra auditoria e resolve denúncias
+    if (userRole === 'admin') {
+      try {
+        await supabaseAdmin
+          .from('reports')
+          .update({ status: 'resolved', updated_at: new Date().toISOString() })
+          .eq('listing_id', listingId);
+      } catch (e) {}
+
+      try {
+        const { data: adminProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        await supabaseAdmin.from('admin_audit_logs').insert({
+          admin_id: userId,
+          action: 'DELETE_LISTING',
+          target_id: listingId,
+          details: {
+            admin_email: adminProfile?.email || 'admin@ucm.ac.mz',
+            title: listing.title,
+            owner_id: listing.owner_id,
+            reason: 'Remoção direta'
+          }
+        });
+      } catch (e) {}
+    }
+
     return true;
   }
 }

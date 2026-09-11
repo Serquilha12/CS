@@ -608,30 +608,6 @@ export function LandingPage() {
               </div>
             )}
 
-            {/* Atalhos Rápidos para Teste de Contas */}
-            <div className="mb-4 p-2.5 bg-slate-50 border border-slate-200/70 rounded-2xl flex items-center justify-between text-xs">
-              <span className="text-[11px] text-slate-500 font-medium flex items-center">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5 shrink-0" />
-                Preenchimento rápido:
-              </span>
-              <div className="flex items-center space-x-1.5">
-                <button
-                  type="button"
-                  onClick={() => setLoginData({ email: 'estudante.teste@ucm.ac.mz', password: 'Senha123!' })}
-                  className="text-[10px] font-bold text-slate-700 bg-white hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-2xs cursor-pointer"
-                >
-                  Estudante
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginData({ email: 'admin.pemba@ucm.ac.mz', password: 'AdminPass123!' })}
-                  className="text-[10px] font-bold text-slate-700 bg-white hover:bg-purple-50 hover:text-purple-700 border border-slate-200 px-2.5 py-1 rounded-lg transition-all active:scale-95 shadow-2xs cursor-pointer"
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-
             <form onSubmit={handleLoginSubmit} className="space-y-3.5 sm:space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1.5">

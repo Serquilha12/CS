@@ -64,6 +64,33 @@ class AdminController {
     }
   }
 
+  async deleteListing(req, res, next) {
+    try {
+      const { reason } = req.body || {};
+      const data = await adminService.deleteListing(req.user.id, req.params.id, reason);
+      return res.status(200).json({
+        success: true,
+        message: 'Anúncio removido definitivamente com sucesso pelo administrador.',
+        data
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async reactivateListing(req, res, next) {
+    try {
+      const data = await adminService.reactivateListing(req.user.id, req.params.id);
+      return res.status(200).json({
+        success: true,
+        message: 'Anúncio reativado com sucesso no feed do Marketplace.',
+        data
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async removeListing(req, res, next) {
     try {
       const { reason } = req.body || {};
@@ -76,6 +103,10 @@ class AdminController {
     } catch (err) {
       next(err);
     }
+  }
+
+  async suspendListing(req, res, next) {
+    return this.removeListing(req, res, next);
   }
 
   async suspendUser(req, res, next) {

@@ -34,11 +34,11 @@ class SocketManager {
           }
         } catch (e) {}
 
-        // 2. Se falhar, tentar validação de token JWT interno (gerado por authService)
-        if (!authenticatedUser) {
+        // 2. Se falhar, tentar validação de token JWT interno assinado com JWT_SECRET
+        if (!authenticatedUser && process.env.JWT_SECRET) {
           try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'ucm-secret-key-pemba-2026');
-            if (decoded) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            if (decoded && decoded.id) {
               authenticatedUser = {
                 id: decoded.id,
                 email: decoded.email,
@@ -46,23 +46,6 @@ class SocketManager {
               };
             }
           } catch (jwtErr) {}
-        }
-
-        // 3. Fallback de desenvolvimento se token for dummy-token
-        if (!authenticatedUser && token === 'dummy-token' && process.env.NODE_ENV !== 'production') {
-          const { data: fallbackProfile } = await supabaseAdmin
-            .from('profiles')
-            .select('id, email, course, full_name')
-            .limit(1)
-            .maybeSingle();
-
-          if (fallbackProfile) {
-            authenticatedUser = {
-              id: fallbackProfile.id,
-              email: fallbackProfile.email,
-              user_metadata: { course: fallbackProfile.course, full_name: fallbackProfile.full_name }
-            };
-          }
         }
 
         if (!authenticatedUser) {
