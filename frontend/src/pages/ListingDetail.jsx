@@ -354,10 +354,10 @@ export function ListingDetail() {
             <button
               onClick={handleOpenReservationModal}
               disabled={reserving}
-              className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-md shadow-blue-900/25 transition-all flex items-center justify-center min-h-[48px] active:scale-95"
+              className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-md shadow-blue-900/25 transition-all flex items-center justify-center min-h-[48px] active:scale-95 cursor-pointer"
             >
-              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
-              Reservar / Combinar Encontro
+              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
+              Solicitar
             </button>
 
             <button
@@ -377,10 +377,10 @@ export function ListingDetail() {
             <button
               onClick={handleOpenReservationModal}
               disabled={reserving}
-              className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center min-h-[48px] active:scale-95"
+              className="flex-1 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center min-h-[48px] active:scale-95 cursor-pointer"
             >
-              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
-              Reservar / Combinar Encontro
+              {reserving ? <Loader2 className="w-4 h-4 animate-spin text-ucm-gold mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2 text-ucm-gold" />}
+              Solicitar
             </button>
 
             <button

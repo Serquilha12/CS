@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Heart, BookOpen, ArrowRight } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
-export function MaterialCard({ item, onClick, onActionClick, onFavoriteToggle, isFavorite = false, actionText = 'Solicitar Reserva / Negociar' }) {
+export function MaterialCard({ item, onClick, onActionClick, onFavoriteToggle, isFavorite = false, actionText = 'Solicitar' }) {
   const [favorite, setFavorite] = useState(isFavorite);
   const [imageError, setImageError] = useState(false);
 

@@ -88,6 +88,26 @@ export function WebSocketProvider({ children }) {
       .on(
         'postgres_changes',
         {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages'
+        },
+        (payload) => {
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            messageListenersRef.current.forEach((listener) => {
+              try {
+                listener({ type: 'MESSAGE_DELETED', messageId: deletedId });
+              } catch (e) {
+                console.error(e);
+              }
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'INSERT',
           schema: 'public',
           table: 'listings'

@@ -4,7 +4,7 @@ import {
   Send, CheckCircle2, ShieldAlert, XCircle, Clock, CheckCheck, Loader2, 
   ArrowLeft, Camera, ShieldCheck, MapPin, AlertTriangle, X, RefreshCw, 
   WifiOff, MessageSquare, Flag, Search, User, ChevronRight, Sparkles,
-  ExternalLink, Eye, Info, Lock, Tag
+  ExternalLink, Eye, Info, Lock, Tag, Trash2
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -66,6 +66,7 @@ export function ChatPage() {
     messages, 
     loading: loadingChat, 
     sendMessage, 
+    deleteMessage,
     retryMessage, 
     handleTypingActivity,
     isPartnerTyping,
@@ -74,6 +75,16 @@ export function ChatPage() {
     listingId: activeListing?.id,
     receiverId
   });
+
+  async function handleDeleteMessage(messageId) {
+    if (!window.confirm('Tem a certeza de que deseja apagar esta mensagem?')) return;
+    try {
+      await deleteMessage(messageId);
+      showToast('Mensagem apagada com sucesso.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Erro ao apagar mensagem.', 'error');
+    }
+  }
 
   const [newMessageText, setNewMessageText] = useState('');
 
@@ -772,7 +783,33 @@ export function ChatPage() {
                               {!isSending && !isFailed && (
                                 <CheckCheck className={`w-3.5 h-3.5 ${isRead ? 'text-sky-500' : 'text-slate-400'}`} />
                               )}
+                              {!isSending && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMessage(msg.id);
+                                  }}
+                                  className="text-slate-400 hover:text-rose-600 transition-colors p-0.5 ml-1 cursor-pointer"
+                                  title="Apagar mensagem"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
                             </>
+                          )}
+                          {!isMe && user?.role === 'admin' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMessage(msg.id);
+                              }}
+                              className="text-slate-400 hover:text-rose-600 transition-colors p-0.5 ml-1 cursor-pointer"
+                              title="Moderação: Apagar mensagem inadequada"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           )}
                         </div>
                       </div>

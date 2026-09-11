@@ -63,6 +63,19 @@ class ChatController {
       next(err);
     }
   }
+
+  async deleteMessage(req, res, next) {
+    try {
+      const { id } = req.params;
+      await chatService.deleteMessage(id, req.user.id, req.user.role);
+      return res.status(200).json({
+        success: true,
+        message: 'Mensagem apagada com sucesso.'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ChatController();

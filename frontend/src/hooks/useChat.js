@@ -241,6 +241,29 @@ export function useChat(param1, param2) {
           );
         }
       })
+      // F. Remoção no PostgreSQL em tempo real
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `listing_id=eq.${listingId}`
+        },
+        (payload) => {
+          const deletedId = payload.old?.id;
+          if (deletedId) {
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          }
+        }
+      )
+      // G. Broadcast instantâneo de mensagem apagada
+      .on('broadcast', { event: 'message_deleted' }, (payload) => {
+        const deletedId = payload?.payload?.messageId;
+        if (deletedId) {
+          setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+        }
+      })
       .subscribe((status) => {
         console.log(`[SUPABASE REALTIME ${channelName}]:`, status);
       });
@@ -270,6 +293,10 @@ export function useChat(param1, param2) {
         setMessages((prev) =>
           prev.map((m) => (m.sender_id === user?.id ? { ...m, status: 'read', is_read: true } : m))
         );
+      }
+
+      if (payload.type === 'MESSAGE_DELETED' && payload.messageId) {
+        setMessages((prev) => prev.filter((m) => m.id !== payload.messageId));
       }
     });
 
@@ -406,10 +433,40 @@ export function useChat(param1, param2) {
     return sendMessage(failedMsg.message_text);
   };
 
+  const deleteMessage = async (messageId) => {
+    if (!messageId) return;
+
+    // Remoção otimista imediata na interface
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+
+    try {
+      const res = await fetchApi(`/chat/messages/${messageId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.success) {
+        // Broadcast instantâneo no canal Supabase Realtime
+        if (supabaseChannelRef.current) {
+          supabaseChannelRef.current.send({
+            type: 'broadcast',
+            event: 'message_deleted',
+            payload: { messageId }
+          });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('[DELETE MESSAGE ERROR]:', err);
+      loadMessages();
+      throw err;
+    }
+  };
+
   return { 
     messages, 
     loading, 
     sendMessage, 
+    deleteMessage,
     retryMessage, 
     handleTypingActivity, 
     isPartnerTyping, 

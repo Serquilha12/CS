@@ -191,7 +191,7 @@ export function Marketplace() {
     }
 
     try {
-      showToast('A iniciar negociação e solicitar reserva...', 'info');
+      showToast('A enviar solicitação...', 'info');
       const res = await fetchApi('/reservations', {
         method: 'POST',
         body: {
@@ -203,7 +203,7 @@ export function Marketplace() {
       });
 
       if (res.success) {
-        showToast('Reserva solicitada! A abrir a conversa no Chat...', 'success');
+        showToast('Solicitação enviada com sucesso! A abrir o Chat...', 'success');
         navigate('/chat', { state: { listing: { ...item, status: 'negotiating' } } });
       }
     } catch (err) {
@@ -529,7 +529,7 @@ export function Marketplace() {
                     item={item}
                     onClick={() => navigate(`/item/${item.id}`)}
                     onActionClick={handleActionClick}
-                    actionText="Solicitar / Negociar"
+                    actionText="Solicitar"
                   />
                 ))}
               </div>

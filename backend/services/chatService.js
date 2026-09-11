@@ -185,10 +185,42 @@ class ChatService {
       .eq('listing_id', listingId)
       .eq('receiver_id', currentUserId)
       .eq('sender_id', otherUserId)
-      .eq('is_read', false);
-
     if (error) console.error('[MARK READ ERROR]:', error.message);
     return true;
+  }
+
+  // Apagar mensagem do chat
+  async deleteMessage(messageId, userId, userRole) {
+    const { data: message, error: findError } = await supabaseAdmin
+      .from('chat_messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (findError || !message) {
+      throw new Error('Mensagem não encontrada.');
+    }
+
+    // Apenas quem enviou a mensagem (ou um administrador) pode apagá-la
+    if (message.sender_id !== userId && userRole !== 'admin') {
+      const forbiddenError = new Error('Sem autorização para apagar esta mensagem.');
+      forbiddenError.statusCode = 403;
+      throw forbiddenError;
+    }
+
+    const { error: delError } = await supabaseAdmin
+      .from('chat_messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (delError) {
+      throw new Error(delError.message);
+    }
+
+    // Notificar parceiro de conversa em tempo real via WebSocket
+    socketManager.notifyMessageDeleted(message.receiver_id, messageId, message.listing_id);
+
+    return { success: true, messageId, listingId: message.listing_id };
   }
 }
 

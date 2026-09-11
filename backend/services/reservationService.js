@@ -57,26 +57,6 @@ class ReservationService {
     }
 
     reservation = createdRes;
-
-    // 4. Iniciar o chat com a mensagem do comprador
-    try {
-      const chatText = initial_message && initial_message.trim().length > 0
-        ? `📍 Proposta de Reserva: Ponto de encontro sugerido em "${basePayload.meeting_point}".\n\nMensagem: ${initial_message.trim()}`
-        : `📍 Olá! Tenho interesse em ficar com este material. Sugiro encontrarmo-nos em "${basePayload.meeting_point}".`;
-
-      await supabaseAdmin
-        .from('chat_messages')
-        .insert({
-          listing_id,
-          sender_id: buyerId,
-          receiver_id: listing.owner_id,
-          message_text: chatText,
-          is_read: false
-        });
-    } catch (chatErr) {
-      console.warn('[RESERVATION INITIAL CHAT WARNING]:', chatErr.message);
-    }
-
     return reservation;
   }
 
