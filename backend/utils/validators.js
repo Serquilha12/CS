@@ -9,7 +9,7 @@ const FULL_NAME_REGEX = /^[a-zA-ZÀ-ÿ\s'-]+$/;
 // Esquema Comum e Reutilizável de Palavra-passe Forte
 const passwordSchema = z
   .string({ required_error: 'A palavra-passe é obrigatória' })
-  .min(8, 'A palavra-passe deve ter no mínimo 8 caracteres')
+  .min(6, 'A palavra-passe deve ter no mínimo 6 caracteres')
   .max(128, 'A palavra-passe não pode exceder 128 caracteres')
   .regex(/[A-Z]/, 'A palavra-passe deve conter pelo menos uma letra maiúscula (A-Z)')
   .regex(/[a-z]/, 'A palavra-passe deve conter pelo menos uma letra minúscula (a-z)')

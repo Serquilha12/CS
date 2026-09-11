@@ -5,8 +5,8 @@ export function checkPasswordStrength(password = '') {
   const rules = [
     {
       id: 'length',
-      label: 'Mínimo de 8 caracteres',
-      met: password.length >= 8
+      label: 'Mínimo de 6 caracteres',
+      met: password.length >= 6
     },
     {
       id: 'upper',

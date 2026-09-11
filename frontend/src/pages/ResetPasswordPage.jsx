@@ -128,7 +128,7 @@ export function ResetPasswordPage() {
                 type={showPassword ? 'text' : 'password'}
                 required
                 autoComplete="new-password"
-                placeholder="Mínimo 8 caracteres (A-Z, a-z, 0-9, !@#$)"
+                placeholder="Mínimo 6 caracteres (A-Z, a-z, 0-9, !@#$)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`w-full p-3.5 pr-11 border rounded-xl text-sm focus:outline-none min-h-[46px] ${

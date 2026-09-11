@@ -934,7 +934,7 @@ export function LandingPage() {
                     type={showRegPassword ? 'text' : 'password'}
                     required
                     autoComplete="new-password"
-                    placeholder="Mínimo 8 caracteres (A-Z, a-z, 0-9, !@#$)"
+                    placeholder="Mínimo 6 caracteres (A-Z, a-z, 0-9, !@#$)"
                     value={regData.password}
                     onChange={(e) => setRegData({ ...regData, password: e.target.value })}
                     className={`w-full p-3 pl-10 pr-11 border rounded-xl text-base sm:text-sm focus:outline-none min-h-[48px] transition-all ${
