@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('cs-session-expired', handleSessionExpired);
   }, []);
 
-  // Temporizador de Inatividade (15 minutos = 900.000 ms) para computadores da faculdade
+  // Temporizador de Inatividade (30 minutos = 1.800.000 ms) para computadores da faculdade
   useEffect(() => {
     if (!user) return;
 
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
       inactivityTimer = setTimeout(() => {
         logout();
         alert('Sessão encerrada automaticamente por inatividade no computador para proteger a sua conta UCM.');
-      }, 15 * 60 * 1000);
+      }, 30 * 60 * 1000);
     };
 
     const events = ['mousemove', 'keydown', 'click', 'touchstart'];
