@@ -152,7 +152,7 @@ export function ProfilePage() {
               <input
                 type="text"
                 required
-                placeholder="Ex: Ancha Jussa"
+                placeholder="Ex: António Moreira"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 className="w-full p-3 border border-slate-300 rounded-xl text-sm min-h-[44px]"

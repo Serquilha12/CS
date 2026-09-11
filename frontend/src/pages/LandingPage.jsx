@@ -798,7 +798,7 @@ export function LandingPage() {
                     required
                     autoComplete="name"
                     autoCapitalize="words"
-                    placeholder="Ex: Ancha Jussa"
+                    placeholder="Ex: António Moreira"
                     value={regData.full_name}
                     onChange={(e) => setRegData({ ...regData, full_name: e.target.value })}
                     onBlur={(e) => {
