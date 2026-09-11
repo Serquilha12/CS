@@ -264,6 +264,15 @@ export function useChat(param1, param2) {
           setMessages((prev) => prev.filter((m) => m.id !== deletedId));
         }
       })
+      // H. Broadcast instantâneo de conversa apagada
+      .on('broadcast', { event: 'conversation_deleted' }, (payload) => {
+        if (payload?.payload?.listingId === listingId) {
+          setMessages([]);
+          if (cacheKey && typeof window !== 'undefined') {
+            localStorage.removeItem(cacheKey);
+          }
+        }
+      })
       .subscribe((status) => {
         console.log(`[SUPABASE REALTIME ${channelName}]:`, status);
       });
@@ -274,7 +283,7 @@ export function useChat(param1, param2) {
       supabase.removeChannel(channel);
       supabaseChannelRef.current = null;
     };
-  }, [listingId, otherUserId, user?.id, handleIncomingMessage]);
+  }, [listingId, otherUserId, user?.id, cacheKey, handleIncomingMessage]);
 
   // CAMADA 2: WEBSOCKET NATIVO DO BACKEND (quando conectado)
   useEffect(() => {
@@ -298,10 +307,17 @@ export function useChat(param1, param2) {
       if (payload.type === 'MESSAGE_DELETED' && payload.messageId) {
         setMessages((prev) => prev.filter((m) => m.id !== payload.messageId));
       }
+
+      if (payload.type === 'CONVERSATION_DELETED' && payload.listingId === listingId) {
+        setMessages([]);
+        if (cacheKey && typeof window !== 'undefined') {
+          localStorage.removeItem(cacheKey);
+        }
+      }
     });
 
     return unsubscribe;
-  }, [subscribeToMessages, listingId, otherUserId, user?.id, handleIncomingMessage]);
+  }, [subscribeToMessages, listingId, otherUserId, user?.id, cacheKey, handleIncomingMessage]);
 
   // CAMADA 3: SMART DELTA-SYNC EM SEGUNDO PLANO (Verificação a cada 2.5s)
   // Garante que nenhuma mensagem seja perdida mesmo com redes instáveis ou quedas de socket
@@ -462,11 +478,43 @@ export function useChat(param1, param2) {
     }
   };
 
+  const deleteConversation = async () => {
+    if (!listingId || !otherUserId) return;
+
+    // Limpar imediatamente o estado local e cache
+    setMessages([]);
+    if (cacheKey && typeof window !== 'undefined') {
+      localStorage.removeItem(cacheKey);
+    }
+
+    try {
+      const res = await fetchApi(`/chat/conversations/${listingId}/${otherUserId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.success) {
+        if (supabaseChannelRef.current) {
+          supabaseChannelRef.current.send({
+            type: 'broadcast',
+            event: 'conversation_deleted',
+            payload: { listingId }
+          });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('[DELETE CONVERSATION ERROR]:', err);
+      loadMessages();
+      throw err;
+    }
+  };
+
   return { 
     messages, 
     loading, 
     sendMessage, 
     deleteMessage,
+    deleteConversation,
     retryMessage, 
     handleTypingActivity, 
     isPartnerTyping, 

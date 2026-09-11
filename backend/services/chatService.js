@@ -222,6 +222,31 @@ class ChatService {
 
     return { success: true, messageId, listingId: message.listing_id };
   }
+
+  // Apagar deliberadamente todo o histórico de conversa entre dois utilizadores num anúncio
+  async deleteConversation(listingId, currentUserId, otherUserId, userRole) {
+    if (!listingId || !otherUserId) {
+      throw new Error('Parâmetros listingId e otherUserId são obrigatórios.');
+    }
+
+    // Apenas participantes da conversa (ou admin) podem apagar
+    let query = supabaseAdmin
+      .from('chat_messages')
+      .delete()
+      .eq('listing_id', listingId)
+      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`);
+
+    const { error: delError } = await query;
+    if (delError) {
+      throw new Error(delError.message);
+    }
+
+    // Notificar ambos os intervenientes via WebSocket
+    socketManager.notifyConversationDeleted(currentUserId, listingId);
+    socketManager.notifyConversationDeleted(otherUserId, listingId);
+
+    return { success: true, listingId, otherUserId };
+  }
 }
 
 module.exports = new ChatService();

@@ -76,6 +76,19 @@ class ChatController {
       next(err);
     }
   }
+
+  async deleteConversation(req, res, next) {
+    try {
+      const { listingId, otherUserId } = req.params;
+      await chatService.deleteConversation(listingId, req.user.id, otherUserId, req.user.role);
+      return res.status(200).json({
+        success: true,
+        message: 'Conversa apagada com sucesso.'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = new ChatController();

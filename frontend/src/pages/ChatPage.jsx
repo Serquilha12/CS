@@ -67,6 +67,7 @@ export function ChatPage() {
     loading: loadingChat, 
     sendMessage, 
     deleteMessage,
+    deleteConversation,
     retryMessage, 
     handleTypingActivity,
     isPartnerTyping,
@@ -83,6 +84,17 @@ export function ChatPage() {
       showToast('Mensagem apagada com sucesso.', 'success');
     } catch (err) {
       showToast(err.message || 'Erro ao apagar mensagem.', 'error');
+    }
+  }
+
+  async function handleDeleteConversation() {
+    if (!window.confirm('Tem a certeza de que deseja apagar todo o histórico desta conversa? Esta ação apagará permanentemente as mensagens.')) return;
+    try {
+      await deleteConversation();
+      showToast('Histórico da conversa apagado com sucesso.', 'success');
+      refreshConversations();
+    } catch (err) {
+      showToast(err.message || 'Erro ao apagar histórico da conversa.', 'error');
     }
   }
 
@@ -172,11 +184,13 @@ export function ChatPage() {
         body: { roleType }
       });
       if (res.success) {
-        showToast(res.message, 'success');
-        setReservation(res.data);
         if (res.isDoubleConfirmed) {
           setActiveListing((prev) => ({ ...prev, status: 'sold' }));
+          showToast('Transação concluída com sucesso! O histórico do chat foi encerrado e apagado.', 'success');
+        } else {
+          showToast(res.message, 'success');
         }
+        setReservation(res.data);
         if (activeListing?.id && receiverId) {
           loadContext(activeListing.id, receiverId);
         }
@@ -531,13 +545,21 @@ export function ChatPage() {
                     </div>
                   </div>
 
-                  {/* Estado do Anúncio & Botão de Denúncia */}
-                  <div className="flex items-center space-x-2 shrink-0">
+                  {/* Estado do Anúncio, Apagar Conversa & Botão de Denúncia */}
+                  <div className="flex items-center space-x-1.5 shrink-0">
                     {renderStatusBadge(activeListing.status)}
                     
                     <button
+                      onClick={handleDeleteConversation}
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Apagar todo o histórico desta conversa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <button
                       onClick={() => setIsReportModalOpen(true)}
-                      className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
+                      className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
                       title="Reportar infração académica"
                     >
                       <Flag className="w-4 h-4" />

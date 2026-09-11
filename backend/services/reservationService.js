@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/supabase');
+const socketManager = require('../websocket/socketManager');
 
 class ReservationService {
   async createReservation(buyerId, { listing_id, agreed_price_mzn, meeting_point, initial_message }) {
@@ -190,18 +191,22 @@ class ReservationService {
             .eq('id', reservation.buyer_id);
         }
 
-        // Mensagem de comemoração no chat
-        await supabaseAdmin
+        // Apagar automaticamente todo o histórico do chat após conclusão da transação
+        const { error: chatDelErr } = await supabaseAdmin
           .from('chat_messages')
-          .insert({
-            listing_id: reservation.listing_id,
-            sender_id: userId,
-            receiver_id: userId === reservation.buyer_id ? reservation.seller_id : reservation.buyer_id,
-            message_text: `🎉 [SISTEMA]: Transação concluída com sucesso por ambas as partes! O ciclo da economia circular foi encerrado com integridade. Poupança estimada gerada: ${savings} MZN.`,
-            is_read: false
-          });
+          .delete()
+          .eq('listing_id', reservation.listing_id);
+
+        if (chatDelErr) {
+          console.warn('[CHAT AUTO-DELETE ERROR]:', chatDelErr.message);
+        } else {
+          // Notificar comprador e vendedor via WebSocket para limparem o chat em tempo real
+          socketManager.notifyConversationDeleted(reservation.buyer_id, reservation.listing_id);
+          socketManager.notifyConversationDeleted(reservation.seller_id, reservation.listing_id);
+          console.log(`[CHAT AUTO-CLEANUP]: Histórico de chat do anúncio ${reservation.listing_id} apagado automaticamente com sucesso.`);
+        }
       } catch (statErr) {
-        console.warn('[RESERVATION SAVINGS UPDATE WARNING]:', statErr.message);
+        console.warn('[RESERVATION SAVINGS/CHAT UPDATE WARNING]:', statErr.message);
       }
     }
 

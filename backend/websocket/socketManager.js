@@ -181,6 +181,19 @@ class SocketManager {
     return false;
   }
 
+  // Notificar utilizador que todo o histórico da conversa foi apagado
+  notifyConversationDeleted(userId, listingId) {
+    const target = this.activeSockets.get(userId);
+    if (target && target.socket.readyState === WebSocket.OPEN) {
+      target.socket.send(JSON.stringify({
+        type: 'CONVERSATION_DELETED',
+        listingId
+      }));
+      return true;
+    }
+    return false;
+  }
+
   // Broadcast inteligente por curso: Envia alerta de novo anúncio apenas para alunos daquele curso
   broadcastCourseAlert(courseName, listingData) {
     let sentCount = 0;
