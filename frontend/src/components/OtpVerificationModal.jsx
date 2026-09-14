@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Mail, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Loader2, X, RotateCcw } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
-const OTP_LENGTH = 4; // Código de verificação OTP de 4 dígitos
+const OTP_LENGTH = 6; // Código de verificação OTP de 6 dígitos
 
 export function OtpVerificationModal({
   isOpen,
@@ -49,7 +49,7 @@ export function OtpVerificationModal({
   if (!isOpen) return null;
 
   const otpCode = otp.join('');
-  // Aceita código de 4 dígitos
+  // Aceita código de 6 dígitos
   const isValidLength = otpCode.length === OTP_LENGTH;
 
   function handleDigitChange(index, value) {
@@ -222,7 +222,7 @@ export function OtpVerificationModal({
             Verificar Código Institucional
           </h2>
           <p className="text-xs text-slate-600 mt-1.5 leading-relaxed px-2">
-            Introduza o código de 4 dígitos recebido no seu e-mail institucional:
+            Introduza o código de 6 dígitos recebido no seu e-mail institucional:
           </p>
           <div className="inline-flex items-center space-x-1.5 mt-2 px-3 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-800 border border-slate-200">
             <Mail className="w-3.5 h-3.5 text-ucm-emerald" />
@@ -230,38 +230,43 @@ export function OtpVerificationModal({
           </div>
         </div>
 
-        {/* Formulário de OTP com 4 dígitos */}
+        {/* Formulário de OTP com 6 dígitos */}
         <form onSubmit={handleVerify} className="space-y-4 sm:space-y-5">
           <div>
             <div
-              className="flex items-center justify-center gap-2.5 sm:gap-3.5"
+              className="flex items-center justify-center gap-1.5 sm:gap-2.5"
               onPaste={handlePaste}
             >
               {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el) => (inputRefs.current[index] = el)}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete="one-time-code"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  className={`w-14 sm:w-16 h-16 sm:h-18 text-center text-2xl sm:text-3xl font-black rounded-2xl border transition-all duration-150 focus:outline-none select-none shadow-xs ${
-                    digit
-                      ? 'border-ucm-emerald bg-emerald-50/25 text-slate-900 focus:ring-2 focus:ring-ucm-emerald'
-                      : 'border-slate-300 bg-white text-slate-900 focus:border-ucm-emerald focus:ring-2 focus:ring-ucm-emerald/40'
-                  } ${errorMessage ? 'border-rose-400 bg-rose-50/30' : ''}`}
-                />
+                <React.Fragment key={index}>
+                  {index === 3 && (
+                    <span className="text-slate-300 font-bold select-none px-0.5 sm:px-1 text-base sm:text-lg">-</span>
+                  )}
+                  <input
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleDigitChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    className={`w-11 sm:w-13 h-14 sm:h-16 text-center text-xl sm:text-2xl font-black rounded-xl sm:rounded-2xl border transition-all duration-150 focus:outline-none select-none shadow-xs ${
+                      digit
+                        ? 'border-ucm-emerald bg-emerald-50/25 text-slate-900 focus:ring-2 focus:ring-ucm-emerald'
+                        : 'border-slate-300 bg-white text-slate-900 focus:border-ucm-emerald focus:ring-2 focus:ring-ucm-emerald/40'
+                    } ${errorMessage ? 'border-rose-400 bg-rose-50/30' : ''}`}
+                    aria-label={`Dígito ${index + 1}`}
+                  />
+                </React.Fragment>
               ))}
             </div>
 
             {/* Ações Rápidas: Limpar Código + Mensagem de Erro/Dica Sem CLS */}
             <div className="flex items-center justify-between mt-3 px-2">
               <span className="text-[11px] text-slate-400">
-                {otpCode.length > 0 ? `${otpCode.length}/${OTP_LENGTH} algarismos` : 'Pode digitar ou colar o código de 4 dígitos'}
+                {otpCode.length > 0 ? `${otpCode.length}/${OTP_LENGTH} algarismos` : 'Pode digitar ou colar o código de 6 dígitos'}
               </span>
               {otpCode.length > 0 && (
                 <button

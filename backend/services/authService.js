@@ -52,7 +52,43 @@ class AuthService {
         lowerErr.includes('duplicate') ||
         lowerErr.includes('user already registered')
       ) {
-        const dupError = new Error('Este e-mail institucional já se encontra registado na plataforma.');
+        // Verificar se este utilizador pendente já tem e-mail confirmado no Supabase Auth
+        try {
+          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+          const existingUser = usersData?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+
+          if (existingUser && !existingUser.email_confirmed_at) {
+            // Utilizador NUNCA verificou o OTP anterior: removemos o registo pendente não verificado
+            await supabaseAdmin.auth.admin.deleteUser(existingUser.id);
+            await supabaseAdmin.from('profiles').delete().eq('id', existingUser.id);
+
+            // Reexecutar signUp limpo para envio de novo OTP
+            const retryRes = await supabase.auth.signUp({
+              email: normalizedEmail,
+              password,
+              options: {
+                data: {
+                  full_name,
+                  course,
+                  campus: campus || 'Campus de Pemba',
+                  role: assignedRole
+                }
+              }
+            });
+
+            if (!retryRes.error && retryRes.data?.user) {
+              return {
+                requiresOtp: true,
+                email: normalizedEmail,
+                message: 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
+              };
+            }
+          }
+        } catch (checkEx) {
+          console.warn('[AUTH CLEANUP UNVERIFIED USER WARNING]:', checkEx.message);
+        }
+
+        const dupError = new Error('Este e-mail institucional já se encontra registado e ativo na plataforma. Por favor, inicie sessão.');
         dupError.statusCode = 409;
         throw dupError;
       }
@@ -67,24 +103,21 @@ class AuthService {
       throw new Error('Não foi possível iniciar o registo. Verifique os dados e tente novamente.');
     }
 
-    // 2. Pré-registar o perfil em 'profiles'
-    const profile = {
-      id: user.id,
-      email: normalizedEmail,
-      full_name,
-      course,
-      campus: campus || 'Campus de Pemba',
-      role: assignedRole
-    };
+    // REGRA DE SEGURANÇA: NÃO criar registo na tabela 'profiles' antes da verificação OTP!
+    // O perfil só será criado após validação bem-sucedida do OTP no método verifyOtp().
 
-    try {
-      await supabaseAdmin.from('profiles').upsert(profile);
-    } catch (e) {
-      console.warn('[AUTH REGISTER PROFILE PRE-INSERT]:', e.message);
-    }
-
-    // Se o utilizador já tiver sessão (ex: confirmação desligada no Supabase), acede direto
+    // Caso de exceção: Se o Supabase estiver configurado com confirmação desligada e gerar sessão imediata
     if (signUpData.session?.access_token) {
+      const profile = {
+        id: user.id,
+        email: normalizedEmail,
+        full_name,
+        course,
+        campus: campus || 'Campus de Pemba',
+        role: assignedRole
+      };
+      await supabaseAdmin.from('profiles').upsert(profile);
+
       const token = jwt.sign(
         { id: user.id, email: normalizedEmail, role: assignedRole, full_name, course },
         JWT_SECRET,
@@ -98,11 +131,11 @@ class AuthService {
       };
     }
 
-    // Fluxo padrão: Requer validação do código OTP de 4 dígitos enviado por e-mail
+    // Fluxo padrão: Requer validação do código OTP de 6 dígitos enviado por e-mail
     return {
       requiresOtp: true,
       email: normalizedEmail,
-      message: 'Código de verificação de 4 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
+      message: 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).'
     };
   }
 
@@ -110,8 +143,8 @@ class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
     const cleanToken = (token || '').toString().trim().replace(/\D/g, '');
 
-    if (!cleanToken || cleanToken.length < 4) {
-      const shortErr = new Error('Introduza o código de verificação completo de 4 dígitos recebido no e-mail.');
+    if (!cleanToken || cleanToken.length < 6) {
+      const shortErr = new Error('Introduza o código de verificação completo de 6 dígitos recebido no e-mail.');
       shortErr.statusCode = 400;
       throw shortErr;
     }

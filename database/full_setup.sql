@@ -123,7 +123,8 @@ ON CONFLICT (id) DO NOTHING;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.email LIKE '%@ucm.ac.mz' THEN
+  -- Apenas cria perfil se o utilizador já tiver confirmado o e-mail via OTP
+  IF NEW.email LIKE '%@ucm.ac.mz' AND NEW.email_confirmed_at IS NOT NULL THEN
     INSERT INTO public.profiles (id, email, full_name, course, campus, role)
     VALUES (
       NEW.id,
@@ -143,7 +144,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
+  AFTER INSERT OR UPDATE OF email_confirmed_at ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Sincronizar apenas utilizadores com e-mail institucional @ucm.ac.mz

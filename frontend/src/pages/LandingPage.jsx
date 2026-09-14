@@ -133,7 +133,7 @@ export function LandingPage() {
         setIsRegisterModal(false);
         setIsOtpModal(true);
         showToast(
-          res.message || 'Código de verificação de 4 dígitos enviado para o seu correio institucional (@ucm.ac.mz).',
+          res.message || 'Código de verificação de 6 dígitos enviado para o seu correio institucional (@ucm.ac.mz).',
           'info',
           6000
         );
@@ -1219,7 +1219,7 @@ export function LandingPage() {
         </div>
       )}
 
-      {/* MODAL DE VERIFICAÇÃO DE CÓDIGO OTP (4 DÍGITOS) */}
+      {/* MODAL DE VERIFICAÇÃO DE CÓDIGO OTP (6 DÍGITOS) */}
       <OtpVerificationModal
         isOpen={isOtpModal}
         email={otpEmail}
