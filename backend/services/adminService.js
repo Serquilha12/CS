@@ -2,12 +2,26 @@ const { supabaseAdmin } = require('../config/supabase');
 
 class AdminService {
   async getStats() {
-    // 1. Contagem REAL de estudantes ativos (exclui o administrador e contas suspensas)
-    const { count: realUsersCount } = await supabaseAdmin
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .eq('role', 'student')
-      .eq('status', 'active');
+    // 1. Contagem REAL de estudantes ativos e verificados (exclui o administrador, suspensos e não confirmados)
+    let realUsersCount = 0;
+    try {
+      const { data: activeProfiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('role', 'student')
+        .eq('status', 'active');
+
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+      const verifiedAuthUserIds = new Set(
+        (authData?.users || [])
+          .filter(u => !!u.email_confirmed_at)
+          .map(u => u.id)
+      );
+
+      realUsersCount = (activeProfiles || []).filter(p => verifiedAuthUserIds.has(p.id)).length;
+    } catch (e) {
+      console.warn('[ADMIN STATS USER COUNT WARNING]:', e.message);
+    }
 
     // 2. Contagem REAL de anúncios ativos visíveis no feed público ('active' ou 'negotiating')
     const { count: realListingsCount } = await supabaseAdmin
@@ -91,9 +105,41 @@ class AdminService {
       query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
     }
 
-    const { data, error } = await query.limit(100);
+    const { data: profiles, error } = await query.limit(100);
     if (error) throw new Error(error.message);
-    return data || [];
+
+    try {
+      // Cruzar com o Supabase Auth para validar quem realmente confirmou o OTP via e-mail
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+      const authMap = new Map((authData?.users || []).map(u => [u.id, u]));
+
+      const unverifiedIds = [];
+      const verifiedUsers = [];
+
+      for (const p of (profiles || [])) {
+        const authUser = authMap.get(p.id);
+        if (authUser && authUser.email_confirmed_at) {
+          verifiedUsers.push(p);
+        } else {
+          unverifiedIds.push(p.id);
+        }
+      }
+
+      // Limpar da tabela profiles quaisquer registos órfãos ou não confirmados
+      if (unverifiedIds.length > 0) {
+        supabaseAdmin
+          .from('profiles')
+          .delete()
+          .in('id', unverifiedIds)
+          .then(() => {})
+          .catch(delErr => console.warn('[AUTO CLEANUP UNVERIFIED PROFILES]:', delErr.message));
+      }
+
+      return verifiedUsers;
+    } catch (crossErr) {
+      console.warn('[ADMIN GET USERS AUTH CROSS-CHECK WARNING]:', crossErr.message);
+      return profiles || [];
+    }
   }
 
   async getReports(statusFilter = '') {
